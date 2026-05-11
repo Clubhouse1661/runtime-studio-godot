@@ -45,7 +45,24 @@ static func run(
 	if exe.is_empty():
 		return _spawn_failed_result()
 
-	var info := OS.execute_with_pipe(exe, args)
+	var spawn_exe := exe
+	var spawn_args := args
+	if OS.get_name() == "Windows":
+		var lower := exe.to_lower()
+		if lower.ends_with(".cmd") or lower.ends_with(".bat"):
+			## CreateProcessW can't launch `.cmd` / `.bat` scripts on its
+			## own — they're cmd.exe input, not PE binaries. Without this
+			## wrap, the moment `McpCliFinder` resolves a Node-style shim
+			## (npm's `claude.cmd`, pnpm's wrappers, …) the next
+			## `OS.execute_with_pipe` surfaces "Could not create child
+			## process: <path> ..." in Godot's output log (#251). Passing
+			## `exe` as a separate argv element keeps spaces in the path
+			## quoted by Godot's standard quoter — no manual escaping.
+			spawn_exe = "cmd.exe"
+			spawn_args = ["/c", exe]
+			spawn_args.append_array(args)
+
+	var info := OS.execute_with_pipe(spawn_exe, spawn_args)
 	if info.is_empty():
 		return _spawn_failed_result()
 

@@ -113,6 +113,36 @@ func test_run_kills_subprocess_when_budget_expires() -> void:
 		"Timeout kill must return within ~budget+poll, not wait for sleep to finish (elapsed=%dms)" % elapsed_msec)
 
 
+func test_run_wraps_cmd_files_through_cmd_exe_on_windows() -> void:
+	## Regression for #251: `McpCliFinder` resolving a Node-style CLI to
+	## its `.cmd` wrapper used to trip CreateProcessW with
+	## `ERROR: Could not create child process: <path> ...`.
+	## `McpCliExec.run` now wraps `.cmd` paths via `cmd.exe /c`, so the
+	## wrapper actually runs and we capture its stdout.
+	if OS.get_name() != "Windows":
+		skip(".cmd shell-out is Windows-only; the wrap path is a no-op elsewhere")
+		return
+	var script_path := OS.get_user_data_dir().path_join("mcp_cli_exec_smoke.cmd")
+	var f := FileAccess.open(script_path, FileAccess.WRITE)
+	assert_true(f != null, "Should be able to write a temp .cmd fixture under user://")
+	if f == null:
+		return
+	## `@echo off` keeps `claude.cmd`-style banners from polluting stdout —
+	## the assertion below only cares that our explicit token came through.
+	f.store_string("@echo off\r\necho cli-exec-cmd-token %1\r\n")
+	f.close()
+	var result := McpCliExec.run(script_path, ["arg-from-mcp"], 5000)
+	assert_false(bool(result.get("spawn_failed", false)),
+		".cmd files must spawn successfully via the cmd.exe wrap")
+	assert_false(bool(result.get("timed_out", false)),
+		"echo-only .cmd finishes well inside 5s")
+	assert_eq(int(result.get("exit_code", -1)), 0,
+		".cmd should exit 0 on success")
+	assert_contains(str(result.get("stdout", "")), "cli-exec-cmd-token arg-from-mcp",
+		"Captured stdout must include the echoed token and forwarded arg")
+	DirAccess.remove_absolute(script_path)
+
+
 func _stderr_fixture_command(exit_code: int) -> Dictionary:
 	if OS.get_name() == "Windows":
 		return {
