@@ -1,8 +1,8 @@
-# Godot AI — Testing Strategy
+# Runtime Studio for Godot — Testing Strategy
 
 *Updated 2026-04-16*
 
-This document defines how Godot AI should prove that new capability is real, stable, and safe to extend.
+This document defines how Runtime Studio for Godot should prove that new capability is real, stable, and safe to extend.
 
 Use the related docs for adjacent concerns:
 
@@ -100,7 +100,7 @@ Passing criteria:
 
 - the editor process stays alive without manual or programmatic restart
 - the installed fixture plugin version advances to v(N+1)
-- `user://godot_ai_update/` is consumed after install
+- `user://runtime_studio_update/` is consumed after install
 - the update window prints no `SCRIPT ERROR: Parse Error`,
   `ERROR: Failed to load script`, or `Could not resolve script` lines
 - no new `Godot*.ips` appears on macOS

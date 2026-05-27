@@ -4,12 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from godot_ai.godot_client.client import GodotCommandError
-from godot_ai.handlers import editor as editor_handlers
-from godot_ai.handlers._readiness import KNOWN_READINESS, require_writable_async
-from godot_ai.protocol.errors import ErrorCode
-from godot_ai.runtime.direct import DirectRuntime
-from godot_ai.sessions.registry import Session, SessionRegistry
+from runtime_studio.godot_client.client import GodotCommandError
+from runtime_studio.handlers import editor as editor_handlers
+from runtime_studio.handlers._readiness import KNOWN_READINESS, require_writable_async
+from runtime_studio.protocol.errors import ErrorCode
+from runtime_studio.runtime.direct import DirectRuntime
+from runtime_studio.sessions.registry import Session, SessionRegistry
 
 
 def _make_session(readiness: str = "ready") -> Session:

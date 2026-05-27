@@ -4,7 +4,7 @@ extends McpTestSuite
 ## Tests for McpSettings utility helpers: truthy(), env_truthy(),
 ## and telemetry_enabled().
 
-const _TENV1 := "GODOT_AI_DISABLE_TELEMETRY"
+const _TENV1 := "RUNTIME_STUDIO_DISABLE_TELEMETRY"
 const _TENV2 := "DISABLE_TELEMETRY"
 
 var _saved_tenv1: Variant = null

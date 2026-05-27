@@ -26,7 +26,7 @@ from pathlib import Path
 
 from tests.unit._gdscript_text import get_func_block
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 RUNNER_PATH = PLUGIN_ROOT / "update_reload_runner.gd"
 ATOMIC_WRITE_PATH = PLUGIN_ROOT / "clients" / "_atomic_write.gd"
 
@@ -199,7 +199,7 @@ def test_extract_and_scan_routes_failure_through_handle_install_failure() -> Non
     assert "_install_existing_files_and_scan" not in source
     assert "_finalize_install_success()" in extract_block, (
         "After the combined install succeeds, finalize must clean up backup snapshots "
-        "so they don't accumulate as stale artifacts under addons/godot_ai/."
+        "so they don't accumulate as stale artifacts under addons/runtime_studio/."
     )
     assert extract_block.index("_install_zip_paths(install_paths)") < extract_block.index(
         "_finalize_install_success()"

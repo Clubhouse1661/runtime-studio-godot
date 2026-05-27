@@ -6,9 +6,9 @@ extends McpTestSuite
 ## still locked in by the PR 4 characterization suite in
 ## test_plugin_lifecycle.gd, which drives plugin.gd's public methods.
 
-const GodotAiPlugin := preload("res://addons/godot_ai/plugin.gd")
+const RuntimeStudioPlugin := preload("res://addons/runtime_studio/plugin.gd")
 const McpServerLifecycleManagerScript := preload(
-	"res://addons/godot_ai/utils/server_lifecycle.gd"
+	"res://addons/runtime_studio/utils/server_lifecycle.gd"
 )
 
 
@@ -17,7 +17,7 @@ const McpServerLifecycleManagerScript := preload(
 ## `_server_pid` and `_server_state` live on the manager (PR 6, #297) —
 ## tests seed them via `manager._server_pid = ...` after construction
 ## rather than poking the host.
-class _ManagerHostStub extends GodotAiPlugin:
+class _ManagerHostStub extends RuntimeStudioPlugin:
 	var listener_pids: Array[int] = []
 	var managed_record := {"pid": 0, "version": "", "ws_port": 0}
 	var live_status := {"name": "", "version": "", "ws_port": 0, "status_code": 0}
@@ -46,7 +46,7 @@ class _ManagerHostStub extends GodotAiPlugin:
 	func _pid_alive_for_proof(pid: int) -> bool:
 		return alive_pids.has(pid)
 
-	func _pid_cmdline_is_godot_ai_for_proof(pid: int) -> bool:
+	func _pid_cmdline_is_runtime_studio_for_proof(pid: int) -> bool:
 		return branded_pids.has(pid)
 
 	func _probe_live_server_status_for_port(_port: int) -> Dictionary:
@@ -84,7 +84,7 @@ class _ManagerHostStub extends GodotAiPlugin:
 
 const TEST_PORT := 65431
 
-const _TENV1 := "GODOT_AI_DISABLE_TELEMETRY"
+const _TENV1 := "RUNTIME_STUDIO_DISABLE_TELEMETRY"
 const _TENV2 := "DISABLE_TELEMETRY"
 
 var _saved_tenv1: Variant = null
@@ -128,7 +128,7 @@ func test_plugin_init_constructs_lifecycle_manager() -> void:
 	## Tree-less construction must work — `_ProofPlugin.new()` in
 	## test_plugin_lifecycle.gd calls `_start_server` on a never-entered
 	## plugin, and that path goes through the manager.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	assert_true(plugin._lifecycle is McpServerLifecycleManager)
 	assert_true(plugin._lifecycle._host == plugin)
 	plugin.free()
@@ -303,7 +303,7 @@ func test_check_server_health_short_circuits_when_pid_zero() -> void:
 
 
 func test_start_server_short_circuits_on_static_guard() -> void:
-	GodotAiPlugin._server_started_this_session = true
+	RuntimeStudioPlugin._server_started_this_session = true
 	var host := _ManagerHostStub.new()
 	host.port_in_use = true
 	host.listener_pids = [99999] as Array[int]
@@ -314,7 +314,7 @@ func test_start_server_short_circuits_on_static_guard() -> void:
 	var killed := host.killed_targets.duplicate()
 	var state := manager.get_state()
 	host.free()
-	GodotAiPlugin._server_started_this_session = false
+	RuntimeStudioPlugin._server_started_this_session = false
 
 	assert_eq(path, McpStartupPath.GUARDED)
 	assert_eq(state, McpServerState.GUARDED)
@@ -322,15 +322,15 @@ func test_start_server_short_circuits_on_static_guard() -> void:
 
 
 func test_prepare_for_update_reload_clears_spawn_guard() -> void:
-	GodotAiPlugin._server_started_this_session = true
+	RuntimeStudioPlugin._server_started_this_session = true
 	var host := _ManagerHostStub.new()
 	var manager := McpServerLifecycleManagerScript.new(host)
 	manager._server_pid = -1
 
 	manager.prepare_for_update_reload()
-	var guard_after := GodotAiPlugin._server_started_this_session
+	var guard_after := RuntimeStudioPlugin._server_started_this_session
 	host.free()
-	GodotAiPlugin._server_started_this_session = false
+	RuntimeStudioPlugin._server_started_this_session = false
 
 	assert_false(guard_after)
 
@@ -357,7 +357,7 @@ func test_inject_sets_env_when_telemetry_disabled_in_settings() -> void:
 	host.free()
 
 	assert_true(injected, "_inject_telemetry_env must return true when it sets the var")
-	assert_true(env_present, "GODOT_AI_DISABLE_TELEMETRY must be set in process env for the spawn")
+	assert_true(env_present, "RUNTIME_STUDIO_DISABLE_TELEMETRY must be set in process env for the spawn")
 
 
 func test_inject_env_is_unset_after_caller_restores() -> void:
@@ -395,10 +395,10 @@ func test_inject_skips_when_setting_is_true() -> void:
 	host.free()
 
 	assert_false(injected, "must not inject when telemetry is enabled")
-	assert_false(env_present, "GODOT_AI_DISABLE_TELEMETRY must not be set when telemetry is enabled")
+	assert_false(env_present, "RUNTIME_STUDIO_DISABLE_TELEMETRY must not be set when telemetry is enabled")
 
 
-func test_inject_skips_when_godot_ai_disable_telemetry_already_present() -> void:
+func test_inject_skips_when_runtime_studio_disable_telemetry_already_present() -> void:
 	## Env var already set by the user / CI — must not double-inject or
 	## report it as injected (which would cause the caller to unset it on
 	## cleanup, removing the user's own setting).
@@ -413,7 +413,7 @@ func test_inject_skips_when_godot_ai_disable_telemetry_already_present() -> void
 	var injected := manager._inject_telemetry_env()
 	host.free()
 
-	assert_false(injected, "must not inject when GODOT_AI_DISABLE_TELEMETRY is already in env")
+	assert_false(injected, "must not inject when RUNTIME_STUDIO_DISABLE_TELEMETRY is already in env")
 
 
 func test_inject_skips_when_disable_telemetry_already_present() -> void:

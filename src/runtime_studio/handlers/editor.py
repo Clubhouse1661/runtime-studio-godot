@@ -1,0 +1,349 @@
+"""Shared handlers for editor tools and resources."""
+
+from __future__ import annotations
+
+import asyncio
+import base64
+import json
+import logging
+
+from fastmcp.tools.base import Image as McpImage
+from mcp.types import TextContent
+
+from runtime_studio import runtime_info
+from runtime_studio.handlers._readiness import require_writable_async, sync_readiness_from_snapshot
+from runtime_studio.runtime.direct import DirectRuntime
+from runtime_studio.tools._pagination import paginate
+
+logger = logging.getLogger(__name__)
+
+SCREENSHOT_TIMEOUT_SEC = 15.0
+GAME_SCREENSHOT_TIMEOUT_SEC = 35.0
+
+## Brief delay between handing the structured pre-flight ack back to
+## FastMCP and firing `reload_plugin` over the WebSocket on the
+## plugin-managed path. Gives the HTTP/SSE response a chance to flush
+## before the plugin tears down our own process. Tests override this
+## to 0 so they don't wait. See `editor_reload_plugin` below.
+PLUGIN_MANAGED_RELOAD_DELAY_SEC = 0.5
+
+## Strong references to in-flight `_dispatch_reload_async` tasks. The
+## event loop only holds weak references to tasks created via
+## `create_task`, so without this set a GC cycle landing during the
+## post-ack delay could collect the task and silently skip the WS
+## reload command — leaving the caller with a "reload_initiated" ack
+## but no actual reload. A done-callback removes the task on exit.
+_pending_reload_tasks: set[asyncio.Task] = set()
+
+
+async def editor_state(runtime: DirectRuntime) -> dict:
+    """Read live editor state and self-heal the session readiness cache.
+
+    The plugin emits ``readiness_changed`` events when ``_check_state_changes``
+    notices a transition, but ``_process`` is paused around save/play frames
+    (see ``McpConnection.pause_processing``), so the event can lag actual state
+    by one or more ticks. During that window the server's ``session.readiness``
+    cache stays at the previous value and a write call gated by
+    ``require_writable`` is rejected even though the editor is already
+    writeable. Issue #262 reproduced exactly that with an ``editor_state ->
+    scene_save`` sequence: editor_state returned ``is_playing: false`` while
+    the cache still said ``playing``, blocking the save.
+
+    The plugin's ``get_editor_state`` reads ``EditorInterface.is_playing_scene``
+    and ``McpConnection.get_readiness`` directly, so its ``readiness`` field is
+    authoritative. Copy it onto the session so a subsequent ``require_writable``
+    can't disagree with the value the agent just observed.
+    """
+    result = await runtime.send_command("get_editor_state")
+    sync_readiness_from_snapshot(runtime, result.get("readiness"))
+    return result
+
+
+async def editor_selection_get(runtime: DirectRuntime) -> dict:
+    return await runtime.send_command("get_selection")
+
+
+async def editor_screenshot(
+    runtime: DirectRuntime,
+    source: str = "viewport",
+    max_resolution: int = 640,
+    include_image: bool = True,
+    view_target: str = "",
+    coverage: bool = False,
+    elevation: float | None = None,
+    azimuth: float | None = None,
+    fov: float | None = None,
+) -> dict | list:
+    params: dict = {"source": source}
+    if max_resolution > 0:
+        params["max_resolution"] = max_resolution
+    if view_target:
+        params["view_target"] = view_target
+    if coverage:
+        params["coverage"] = True
+    if elevation is not None:
+        params["elevation"] = elevation
+    if azimuth is not None:
+        params["azimuth"] = azimuth
+    if fov is not None:
+        params["fov"] = fov
+
+    timeout = GAME_SCREENSHOT_TIMEOUT_SEC if source == "game" else SCREENSHOT_TIMEOUT_SEC
+    result = await runtime.send_command(
+        "take_screenshot",
+        params,
+        timeout=timeout,
+    )
+
+    # --- Coverage response: multiple images ---
+    if result.get("coverage") and "images" in result:
+        images_meta = []
+        for img in result["images"]:
+            meta_entry = {
+                "label": img["label"],
+                "elevation": img["elevation"],
+                "azimuth": img["azimuth"],
+                "fov": img["fov"],
+                "width": img["width"],
+                "height": img["height"],
+            }
+            if img.get("ortho"):
+                meta_entry["ortho"] = True
+            images_meta.append(meta_entry)
+        metadata = {
+            "source": result["source"],
+            "view_target": view_target,
+            "coverage": True,
+            "image_count": len(result["images"]),
+            "images": images_meta,
+        }
+        if "view_target_count" in result:
+            metadata["view_target_count"] = result["view_target_count"]
+        if "view_target_not_found" in result:
+            metadata["view_target_not_found"] = result["view_target_not_found"]
+        for aabb_key in ("aabb_center", "aabb_size", "aabb_longest_ground_axis"):
+            if aabb_key in result:
+                metadata[aabb_key] = result[aabb_key]
+
+        if not include_image:
+            return metadata
+
+        blocks: list = [TextContent(type="text", text=json.dumps(metadata))]
+        for img in result["images"]:
+            image_bytes = base64.b64decode(img.get("image_base64", ""))
+            blocks.append(McpImage(data=image_bytes, format=img.get("format", "png")))
+        return blocks
+
+    # --- Single-image response ---
+    metadata = {
+        "source": result["source"],
+        "width": result["width"],
+        "height": result["height"],
+        "original_width": result["original_width"],
+        "original_height": result["original_height"],
+        "format": result["format"],
+    }
+    if view_target:
+        metadata["view_target"] = view_target
+        if "view_target_count" in result:
+            metadata["view_target_count"] = result["view_target_count"]
+        if "view_target_not_found" in result:
+            metadata["view_target_not_found"] = result["view_target_not_found"]
+    for key in (
+        "elevation",
+        "azimuth",
+        "fov",
+        "aabb_center",
+        "aabb_size",
+        "aabb_longest_ground_axis",
+        "camera_path",
+    ):
+        if key in result:
+            metadata[key] = result[key]
+
+    if not include_image:
+        return metadata
+
+    image_b64 = result.get("image_base64", "")
+    image_bytes = base64.b64decode(image_b64)
+    fmt = result.get("format", "png")
+
+    return [
+        TextContent(type="text", text=json.dumps(metadata)),
+        McpImage(data=image_bytes, format=fmt),
+    ]
+
+
+async def performance_monitors_get(
+    runtime: DirectRuntime, monitors: list[str] | None = None
+) -> dict:
+    params: dict = {}
+    if monitors:
+        params["monitors"] = monitors
+    return await runtime.send_command("get_performance_monitors", params)
+
+
+async def logs_clear(runtime: DirectRuntime) -> dict:
+    return await runtime.send_command("clear_logs")
+
+
+_VALID_LOG_SOURCES = ("plugin", "game", "editor", "all")
+
+
+async def logs_read(
+    runtime: DirectRuntime,
+    count: int = 50,
+    offset: int = 0,
+    source: str = "plugin",
+    since_run_id: str = "",
+) -> dict:
+    if source not in _VALID_LOG_SOURCES:
+        raise ValueError(f"Invalid source '{source}' — use 'plugin', 'game', 'editor', or 'all'")
+
+    if source == "plugin":
+        ## Backward-compatible shape: callers asking for the default
+        ## source still receive the historical {lines: [str], ...}
+        ## payload, so existing dashboards and tests don't break.
+        result = await runtime.send_command("get_logs", {"count": 500, "source": "plugin"})
+        ## The plugin response can be either the legacy `{lines: [str]}`
+        ## (older plugin versions) or the new structured shape
+        ## `{lines: [{source, level, text}], ...}`. Normalize to legacy
+        ## strings here so the public Python API doesn't shift under
+        ## existing callers.
+        raw_lines = result.get("lines", [])
+        flat: list[str] = []
+        for entry in raw_lines:
+            if isinstance(entry, dict):
+                flat.append(str(entry.get("text", "")))
+            else:
+                flat.append(str(entry))
+        return paginate(flat, offset, count, key="lines")
+
+    ## game / all: ask the plugin to apply offset+count itself so the
+    ## ring buffer's run_id, dropped_count, and is_running stay
+    ## authoritative on the editor side.
+    result = await runtime.send_command(
+        "get_logs", {"count": count, "offset": offset, "source": source}
+    )
+    run_id = result.get("run_id", "")
+    if since_run_id and run_id and run_id != since_run_id:
+        ## A new game run has started since the caller's last poll —
+        ## tell them to reset their cursor instead of returning stale
+        ## lines from the previous play session.
+        return {
+            "source": source,
+            "lines": [],
+            "total_count": 0,
+            "returned_count": 0,
+            "offset": 0,
+            "limit": count,
+            "has_more": False,
+            "run_id": run_id,
+            "is_running": result.get("is_running", False),
+            "dropped_count": result.get("dropped_count", 0),
+            "stale_run_id": True,
+        }
+    lines = result.get("lines", [])
+    total = int(result.get("total_count", len(lines)))
+    return {
+        "source": source,
+        "lines": lines,
+        "total_count": total,
+        "returned_count": len(lines),
+        "offset": offset,
+        "limit": count,
+        "has_more": offset + count < total,
+        "run_id": run_id,
+        "is_running": result.get("is_running", False),
+        "dropped_count": result.get("dropped_count", 0),
+        "stale_run_id": False,
+    }
+
+
+async def editor_reload_plugin(runtime: DirectRuntime) -> dict:
+    active = runtime.get_active_session()
+    if active is None:
+        raise ConnectionError("No active Godot session")
+    old_id = active.session_id
+
+    if runtime_info.is_plugin_managed():
+        ## Plugin-managed server: the reload will kill our own process
+        ## before any sync `wait_for_session` result can reach the
+        ## caller (issue #393). Hand the structured ack back to FastMCP
+        ## now so the HTTP response flushes, then dispatch the reload
+        ## command from a background task. `new_session_id` is dropped
+        ## from this shape because it lives in the *next* server's
+        ## registry, which this process can never see.
+        task = asyncio.create_task(_dispatch_reload_async(runtime, old_id))
+        _pending_reload_tasks.add(task)
+        task.add_done_callback(_pending_reload_tasks.discard)
+        return {
+            "status": "reload_initiated",
+            "transport_will_drop": True,
+            "old_session_id": old_id,
+            "guidance": (
+                "Server is plugin-managed; the WebSocket transport will drop "
+                "as part of the reload. Reconnect, then call "
+                "session_manage(op='list') to find the new session_id."
+            ),
+        }
+
+    known_ids = {session.session_id for session in runtime.list_sessions()}
+
+    try:
+        ## Pin to old_id explicitly so the reload command can't race
+        ## active-session changes (e.g. another editor disconnecting mid-call).
+        await runtime.send_command("reload_plugin", session_id=old_id, timeout=2.0)
+    except (ConnectionError, TimeoutError) as exc:
+        logger.debug("Expected disconnect during reload: %s", exc)
+
+    new_session = await runtime.wait_for_session(
+        exclude_id=old_id,
+        timeout=15.0,
+        known_ids=known_ids,
+        project_path=active.project_path,
+    )
+
+    runtime.set_active_session(new_session.session_id)
+    return {
+        "status": "reloaded",
+        "old_session_id": old_id,
+        "new_session_id": new_session.session_id,
+    }
+
+
+async def _dispatch_reload_async(runtime: DirectRuntime, old_id: str) -> None:
+    if PLUGIN_MANAGED_RELOAD_DELAY_SEC > 0:
+        await asyncio.sleep(PLUGIN_MANAGED_RELOAD_DELAY_SEC)
+    try:
+        await runtime.send_command("reload_plugin", session_id=old_id, timeout=2.0)
+    except (ConnectionError, TimeoutError) as exc:
+        logger.debug("Expected disconnect during plugin-managed reload: %s", exc)
+    except Exception:
+        logger.exception("Unexpected error dispatching plugin-managed reload")
+
+
+async def editor_quit(runtime: DirectRuntime) -> dict:
+    return await runtime.send_command("quit_editor")
+
+
+async def editor_selection_set(runtime: DirectRuntime, paths: list[str]) -> dict:
+    await require_writable_async(runtime)
+    return await runtime.send_command("set_selection", {"paths": paths})
+
+
+async def selection_resource_data(runtime: DirectRuntime) -> dict:
+    return await editor_selection_get(runtime)
+
+
+async def logs_resource_data(runtime: DirectRuntime) -> dict:
+    return await runtime.send_command("get_logs", {"count": 100})
+
+
+async def game_eval(runtime: DirectRuntime, code: str) -> dict:
+    """Execute GDScript in the running game. Use 'return' for values.
+
+    Runtime errors in the eval code are not caught — if eval times out,
+    check ``logs_read(source='game')`` for push_error output.
+    """
+    return await runtime.send_command("game_eval", {"code": code}, timeout=15.0)

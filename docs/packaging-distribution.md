@@ -1,4 +1,4 @@
-# Godot AI — Packaging & Distribution
+# Runtime Studio for Godot — Packaging & Distribution
 
 *Updated 2026-04-13*
 
@@ -28,10 +28,10 @@ The goal is not “many install methods” for its own sake. The goal is:
 
 ## Naming And Package Identity
 
-- repo: `godot-ai`
-- Python package / CLI: `godot-ai`
-- Python import path: `godot_ai`
-- Godot plugin path: `plugin/addons/godot_ai/`
+- repo: `runtime-studio-godot`
+- Python package / CLI: `runtime-studio-godot`
+- Python import path: `runtime_studio`
+- Godot plugin path: `plugin/addons/runtime_studio/`
 
 These names should stay aligned in docs and install examples.
 
@@ -47,7 +47,7 @@ Target experience:
 
 1. install `uv`
 2. enable the plugin in Godot
-3. let the plugin discover and run `uvx godot-ai`
+3. let the plugin discover and run `uvx runtime-studio-godot`
 4. connect the MCP client to `http://127.0.0.1:8000/mcp`
 
 ### Path B: Dev Checkout
@@ -59,7 +59,7 @@ Typical flow:
 1. clone repo
 2. run `script/setup-dev`
 3. enable plugin in `test_project/`
-4. plugin prefers the local `.venv` and runs `python -m godot_ai`
+4. plugin prefers the local `.venv` and runs `python -m runtime_studio`
 
 ### Path C: Standalone Binary
 
@@ -73,12 +73,12 @@ This path is worth building, but only if it stays reliable.
 
 ### Path D: Godot AssetLib
 
-Godot's built-in AssetLib is the most natural discovery surface for the plugin. A user who already has Godot open should be able to find Godot AI there without ever visiting GitHub.
+Godot's built-in AssetLib is the most natural discovery surface for the plugin. A user who already has Godot open should be able to find Runtime Studio for Godot there without ever visiting GitHub.
 
 Target experience:
 
 1. open Godot, go to the AssetLib tab
-2. search for "Godot AI" or "MCP"
+2. search for "Runtime Studio for Godot" or "MCP"
 3. download and install into the current project
 4. enable the plugin; it handles server startup (via `uvx` or a local `.venv`) from there
 
@@ -101,7 +101,7 @@ The install flow should be understandable without repo archaeology.
 
 ### Godot Side
 
-1. copy `plugin/addons/godot_ai/` into the project’s `addons/`
+1. copy `plugin/addons/runtime_studio/` into the project’s `addons/`
 2. enable the plugin in Project Settings
 3. let the dock show server status and client configuration state
 
@@ -125,13 +125,13 @@ The install docs should explicitly cover:
 
 ## PyPI / `uvx` Publishing Work
 
-- [ ] verify `godot-ai` package availability and ownership
+- [ ] verify `runtime-studio-godot` package availability and ownership
 - [x] finalize metadata in `pyproject.toml` — authors, keywords, classifiers, project URLs, markdown readme content-type
 - [ ] publish to PyPI
-- [ ] verify `uvx godot-ai --help`
+- [ ] verify `uvx runtime-studio-godot --help`
 - [ ] verify the plugin can discover and launch the published package cleanly
 
-CI release-smoke builds the wheel and sdist on every push, installs each into a clean venv, and invokes `godot-ai --version` / `--help` to catch entry-point and packaging regressions before publishing.
+CI release-smoke builds the wheel and sdist on every push, installs each into a clean venv, and invokes `runtime-studio-godot --version` / `--help` to catch entry-point and packaging regressions before publishing.
 
 The published package path should be treated as first-class, not as a fallback for people who “know Python.”
 
@@ -143,9 +143,9 @@ The published package path should be treated as first-class, not as a fallback f
 
 ```bash
 pyinstaller --onefile \
-    --name godot-ai \
-    --add-data "src/godot_ai:godot_ai" \
-    src/godot_ai/__main__.py
+    --name runtime-studio-godot \
+    --add-data "src/runtime_studio:runtime_studio" \
+    src/runtime_studio/__main__.py
 ```
 
 ### What To Verify
@@ -184,7 +184,7 @@ The binary path is only worth keeping if it remains boring and supportable.
 
 ### Tier 3: Release-Surface Smoke
 
-- [ ] verify `uvx godot-ai` path
+- [ ] verify `uvx runtime-studio-godot` path
 - [x] verify package install path — `release-smoke` job in `.github/workflows/ci.yml` builds wheel + sdist, installs both into a fresh venv on Linux/macOS/Windows, and runs the CLI entry point
 - [ ] verify binary startup path
 - [ ] verify AssetLib-installed plugin loads and connects to the server
@@ -203,7 +203,7 @@ This tier is about install confidence, not deep correctness.
 - [ ] no shipped `class_name` declaration was deleted; any retired global class
       remains at its published file path as a compatibility shim
 - [ ] self-update release shape is compatible with old two-phase runners:
-      new files in `addons/godot_ai/` do not reference constants, methods,
+      new files in `addons/runtime_studio/` do not reference constants, methods,
       or static-ness changes added to existing load-surface scripts in the
       same release. This applies to both `class_name` scripts and
       preload-only scripts; old runners fail on stale Script-object content,

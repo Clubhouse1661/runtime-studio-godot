@@ -1,10 +1,10 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const EditorHandler := preload("res://addons/godot_ai/handlers/editor_handler.gd")
-const StubBacktrace := preload("res://addons/godot_ai/testing/stub_backtrace.gd")
+const EditorHandler := preload("res://addons/runtime_studio/handlers/editor_handler.gd")
+const StubBacktrace := preload("res://addons/runtime_studio/testing/stub_backtrace.gd")
 
 ## Tests for EditorHandler — editor state, selection, and logs.
 
@@ -1008,7 +1008,7 @@ func test_get_logs_source_invalid_message_lists_editor() -> void:
 
 # ----- EditorLogger filtering (issue #231) -----
 
-const _EDITOR_LOGGER_PATH := "res://addons/godot_ai/runtime/editor_logger.gd"
+const _EDITOR_LOGGER_PATH := "res://addons/runtime_studio/runtime/editor_logger.gd"
 
 
 func test_editor_logger_captures_user_script_parse_error() -> void:
@@ -1092,7 +1092,7 @@ func test_editor_logger_captures_engine_resource_error_with_res_path() -> void:
 	assert_contains(entries[0].text, "Failed loading resource")
 
 
-func test_editor_logger_drops_engine_resource_error_for_godot_ai_addon() -> void:
+func test_editor_logger_drops_engine_resource_error_for_runtime_studio_addon() -> void:
 	if not ClassDB.class_exists("Logger"):
 		skip("Logger class requires Godot 4.5+")
 		return
@@ -1102,16 +1102,16 @@ func test_editor_logger_drops_engine_resource_error_for_godot_ai_addon() -> void
 		"_load",
 		"core/io/resource_loader.cpp",
 		222,
-		"Failed loading resource: res://addons/godot_ai/missing.tres.",
+		"Failed loading resource: res://addons/runtime_studio/missing.tres.",
 		"",
 		false,
 		0,
 		[],
 	)
-	assert_eq(ed_buf.total_count(), 0, "Engine resource errors inside addons/godot_ai/ should be filtered")
+	assert_eq(ed_buf.total_count(), 0, "Engine resource errors inside addons/runtime_studio/ should be filtered")
 
 
-func test_editor_logger_drops_godot_ai_addon_to_avoid_feedback_loop() -> void:
+func test_editor_logger_drops_runtime_studio_addon_to_avoid_feedback_loop() -> void:
 	## We push_warning ourselves from plugin.gd. Capturing those would
 	## amplify on every reload and pollute the buffer the dock reads.
 	if not ClassDB.class_exists("Logger"):
@@ -1119,8 +1119,8 @@ func test_editor_logger_drops_godot_ai_addon_to_avoid_feedback_loop() -> void:
 		return
 	var ed_buf := McpEditorLogBuffer.new()
 	var logger = load(_EDITOR_LOGGER_PATH).new(ed_buf)
-	logger._log_error("_start_server", "res://addons/godot_ai/plugin.gd", 100, "self-noise", "", false, 1, [])
-	assert_eq(ed_buf.total_count(), 0, "addons/godot_ai/ paths should be filtered")
+	logger._log_error("_start_server", "res://addons/runtime_studio/plugin.gd", 100, "self-noise", "", false, 1, [])
+	assert_eq(ed_buf.total_count(), 0, "addons/runtime_studio/ paths should be filtered")
 
 
 func test_editor_logger_uses_script_backtrace_for_push_error() -> void:
@@ -1157,7 +1157,7 @@ func test_editor_logger_uses_script_backtrace_for_push_error() -> void:
 
 
 func test_editor_logger_drops_push_error_from_plugin_via_backtrace() -> void:
-	## A push_warning called from inside addons/godot_ai/ should be filtered
+	## A push_warning called from inside addons/runtime_studio/ should be filtered
 	## even though file points at variant_utility.cpp — the backtrace gives
 	## us the real source path, and that's the path we filter on.
 	if not ClassDB.class_exists("Logger"):
@@ -1165,7 +1165,7 @@ func test_editor_logger_drops_push_error_from_plugin_via_backtrace() -> void:
 		return
 	var ed_buf := McpEditorLogBuffer.new()
 	var logger = load(_EDITOR_LOGGER_PATH).new(ed_buf)
-	var bt := StubBacktrace.new("res://addons/godot_ai/plugin.gd", 50, "_attach_editor_logger")
+	var bt := StubBacktrace.new("res://addons/runtime_studio/plugin.gd", 50, "_attach_editor_logger")
 	logger._log_error(
 		"push_warning",
 		"core/variant/variant_utility.cpp",
@@ -1176,7 +1176,7 @@ func test_editor_logger_drops_push_error_from_plugin_via_backtrace() -> void:
 		1,
 		[bt],
 	)
-	assert_eq(ed_buf.total_count(), 0, "Backtrace inside godot_ai addon should still filter")
+	assert_eq(ed_buf.total_count(), 0, "Backtrace inside runtime_studio addon should still filter")
 
 
 func test_editor_logger_no_op_when_buffer_unset() -> void:
@@ -1221,19 +1221,19 @@ func test_editor_logger_extract_user_res_path_predicate() -> void:
 		script._extract_user_res_path("Failed loading resource: res://folder/with spaces/file.tres."),
 		"res://folder/with spaces/file.tres",
 	)
-	assert_eq(script._extract_user_res_path("Failed loading resource: res://addons/godot_ai/x.tres."), "")
+	assert_eq(script._extract_user_res_path("Failed loading resource: res://addons/runtime_studio/x.tres."), "")
 	assert_eq(script._extract_user_res_path("scene/main/scene_tree.cpp noise"), "")
 
 
-func test_editor_logger_is_in_godot_ai_addon_predicate() -> void:
+func test_editor_logger_is_in_runtime_studio_addon_predicate() -> void:
 	if not ClassDB.class_exists("Logger"):
 		skip("Logger class requires Godot 4.5+")
 		return
 	var script = load(_EDITOR_LOGGER_PATH)
-	assert_true(script._is_in_godot_ai_addon("res://addons/godot_ai/plugin.gd"))
-	assert_true(script._is_in_godot_ai_addon("/abs/project/addons/godot_ai/handler.gd"))
-	assert_false(script._is_in_godot_ai_addon("res://user_script.gd"))
-	assert_false(script._is_in_godot_ai_addon("res://addons/other_plugin/foo.gd"))
+	assert_true(script._is_in_runtime_studio_addon("res://addons/runtime_studio/plugin.gd"))
+	assert_true(script._is_in_runtime_studio_addon("/abs/project/addons/runtime_studio/handler.gd"))
+	assert_false(script._is_in_runtime_studio_addon("res://user_script.gd"))
+	assert_false(script._is_in_runtime_studio_addon("res://addons/other_plugin/foo.gd"))
 
 
 # ----- McpDebuggerPlugin: log batch capture (issue #73) -----
@@ -1304,7 +1304,7 @@ func test_debugger_plugin_log_batch_no_buffer_is_safe() -> void:
 
 # ----- GameLogger._log_error arg routing (PR #78 smoke bug) -----
 
-const _GAME_LOGGER_PATH := "res://addons/godot_ai/runtime/game_logger.gd"
+const _GAME_LOGGER_PATH := "res://addons/runtime_studio/runtime/game_logger.gd"
 
 
 func test_game_logger_single_arg_push_warning_preserves_user_message() -> void:

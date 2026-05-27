@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from godot_ai.protocol.errors import ErrorCode
+from runtime_studio.protocol.errors import ErrorCode
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 
 
 def test_deferred_timeout_error_code_registered_on_both_sides() -> None:
@@ -18,6 +18,9 @@ def test_deferred_timeout_error_code_registered_on_both_sides() -> None:
 def test_dispatcher_tracks_deferred_ids_and_emits_timeout_error() -> None:
     source = (PLUGIN_ROOT / "dispatcher.gd").read_text(encoding="utf-8")
     assert "_pending_deferred" in source
-    assert 'const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")' in source
+    assert (
+        'const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")'
+        in source
+    )
     assert "ErrorCodes.DEFERRED_TIMEOUT" in source
     assert "complete_deferred_response" in source

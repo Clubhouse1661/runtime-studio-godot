@@ -10,8 +10,8 @@ from unittest.mock import patch
 
 import pytest
 
-from godot_ai.sessions.registry import SessionRegistry
-from godot_ai.transport.websocket import GodotWebSocketServer
+from runtime_studio.sessions.registry import SessionRegistry
+from runtime_studio.transport.websocket import GodotWebSocketServer
 
 
 def _make_server() -> GodotWebSocketServer:
@@ -45,9 +45,9 @@ async def test_start_swallows_address_in_use_per_platform(
 ) -> None:
     caplog.set_level(logging.WARNING)
     with (
-        patch("godot_ai.transport.websocket.errno.EADDRINUSE", platform_errno),
+        patch("runtime_studio.transport.websocket.errno.EADDRINUSE", platform_errno),
         patch(
-            "godot_ai.transport.websocket.websockets.serve",
+            "runtime_studio.transport.websocket.websockets.serve",
             _serve_raising(platform_errno),
         ),
     ):
@@ -58,7 +58,7 @@ async def test_start_swallows_address_in_use_per_platform(
 
 async def test_start_propagates_other_oserrors() -> None:
     with patch(
-        "godot_ai.transport.websocket.websockets.serve",
+        "runtime_studio.transport.websocket.websockets.serve",
         _serve_raising(errno.EACCES),
     ):
         with pytest.raises(OSError) as exc_info:

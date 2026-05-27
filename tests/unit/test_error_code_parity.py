@@ -1,7 +1,7 @@
 """Contract test: every code GDScript emits must exist in Python's ErrorCode.
 
 Plugin handlers send `{"error": {"code": "<NAME>", ...}}` over the wire;
-`godot_ai.godot_client.client.GodotCommandError` forwards `error.code` verbatim. If a
+`runtime_studio.godot_client.client.GodotCommandError` forwards `error.code` verbatim. If a
 GDScript handler ever emits a code Python's `ErrorCode` enum doesn't know, the
 forwarded string still works at runtime but agents and tests that match on
 `ErrorCode.X` silently miss it. Tracked as #297 audit finding #12.
@@ -17,13 +17,13 @@ import functools
 import re
 from pathlib import Path
 
-from godot_ai.protocol.errors import ErrorCode
+from runtime_studio.protocol.errors import ErrorCode
 
 ERROR_CODES_GD = (
     Path(__file__).resolve().parents[2]
     / "plugin"
     / "addons"
-    / "godot_ai"
+    / "runtime_studio"
     / "utils"
     / "error_codes.gd"
 )
@@ -50,7 +50,7 @@ def test_every_gdscript_code_exists_in_python_errorcode() -> None:
     missing = sorted(gdscript_codes.keys() - python_codes.keys())
     assert not missing, (
         f"GDScript emits error codes that Python's ErrorCode doesn't define: "
-        f"{missing}. Add them to src/godot_ai/protocol/errors.py."
+        f"{missing}. Add them to src/runtime_studio/protocol/errors.py."
     )
 
 

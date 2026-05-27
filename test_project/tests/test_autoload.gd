@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const AutoloadHandler := preload("res://addons/godot_ai/handlers/autoload_handler.gd")
+const AutoloadHandler := preload("res://addons/runtime_studio/handlers/autoload_handler.gd")
 
 ## Tests for AutoloadHandler — autoload listing, adding, and removing.
 

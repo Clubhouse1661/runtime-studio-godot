@@ -57,8 +57,8 @@ if (-not (Test-Path -LiteralPath $addonsDir)) {
     New-Item -ItemType Directory -Path $addonsDir -Force | Out-Null
 }
 
-$linkPath = Join-Path $addonsDir 'godot_ai'
-$targetPath = Join-Path $repoRoot 'plugin\addons\godot_ai'
+$linkPath = Join-Path $addonsDir 'runtime_studio'
+$targetPath = Join-Path $repoRoot 'plugin\addons\runtime_studio'
 
 # If something already exists at the link path (stale junction, leftover
 # text file from an old clone, or a copy), remove it so we can build fresh.
@@ -81,9 +81,9 @@ if ($LASTEXITCODE -ne 0) { throw "mklink /J failed for $linkPath -> $targetPath"
 $item = Get-Item -LiteralPath $linkPath -Force
 $isSymlinkOrJunction = ($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0
 if ($isSymlinkOrJunction -and (Test-Path -LiteralPath (Join-Path $linkPath 'plugin.gd'))) {
-    Write-Host "[ok] test_project\addons\godot_ai -> plugin\addons\godot_ai (junction)"
+    Write-Host "[ok] test_project\addons\runtime_studio -> plugin\addons\runtime_studio (junction)"
 } else {
-    throw "test_project\addons\godot_ai did not materialize as a working junction."
+    throw "test_project\addons\runtime_studio did not materialize as a working junction."
 }
 
 # --- 3. Python venv via uv ------------------------------------------------

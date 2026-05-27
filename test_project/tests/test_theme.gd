@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const ThemeHandler := preload("res://addons/godot_ai/handlers/theme_handler.gd")
+const ThemeHandler := preload("res://addons/runtime_studio/handlers/theme_handler.gd")
 
 ## Tests for ThemeHandler — Theme resource authoring.
 

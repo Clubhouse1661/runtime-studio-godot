@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const CurveHandler := preload("res://addons/godot_ai/handlers/curve_handler.gd")
+const CurveHandler := preload("res://addons/runtime_studio/handlers/curve_handler.gd")
 
 ## Tests for CurveHandler — set points on Curve/Curve2D/Curve3D resources.
 

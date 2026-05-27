@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 PATH_VALIDATOR = PLUGIN_ROOT / "utils" / "path_validator.gd"
 SCRIPT_HANDLER = PLUGIN_ROOT / "handlers" / "script_handler.gd"
 FILESYSTEM_HANDLER = PLUGIN_ROOT / "handlers" / "filesystem_handler.gd"

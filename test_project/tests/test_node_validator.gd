@@ -1,13 +1,13 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
 ## Tests for McpNodeValidator (audit-v2 #20 / issue #364) — the shared
 ## resolve-or-error helper that subsumed the 38+ inline EDITOR_NOT_READY +
 ## NODE_NOT_FOUND blocks across handlers.
 
-const McpNodeValidator := preload("res://addons/godot_ai/handlers/_node_validator.gd")
+const McpNodeValidator := preload("res://addons/runtime_studio/handlers/_node_validator.gd")
 
 
 func suite_name() -> String:

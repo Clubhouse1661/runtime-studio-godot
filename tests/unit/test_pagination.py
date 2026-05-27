@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from godot_ai.tools._pagination import paginate as _paginate
+from runtime_studio.tools._pagination import paginate as _paginate
 
 
 class TestPaginate:

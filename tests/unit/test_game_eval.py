@@ -2,9 +2,9 @@
 
 import pytest
 
-from godot_ai.handlers import editor as editor_handlers
-from godot_ai.runtime.direct import DirectRuntime
-from godot_ai.sessions.registry import SessionRegistry
+from runtime_studio.handlers import editor as editor_handlers
+from runtime_studio.runtime.direct import DirectRuntime
+from runtime_studio.sessions.registry import SessionRegistry
 
 
 class _StubGameEvalClient:

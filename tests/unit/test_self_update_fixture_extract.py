@@ -34,7 +34,7 @@ def _write_zip_with_raw_member_name(
     _write_zip(
         path,
         {
-            "addons/godot_ai/plugin.cfg": b"[plugin]\nname=ok\n",
+            "addons/runtime_studio/plugin.cfg": b"[plugin]\nname=ok\n",
             normalized_name: data,
         },
     )
@@ -64,8 +64,8 @@ def test_clean_zip_extracts_files_to_target(tmp_path: Path) -> None:
     _write_zip(
         zip_path,
         {
-            "addons/godot_ai/plugin.cfg": b"[plugin]\nname=ok\n",
-            "addons/godot_ai/sub/file.gd": b"pass",
+            "addons/runtime_studio/plugin.cfg": b"[plugin]\nname=ok\n",
+            "addons/runtime_studio/sub/file.gd": b"pass",
         },
     )
     target = tmp_path / "target"
@@ -79,8 +79,8 @@ def test_parent_traversal_entry_is_rejected(tmp_path: Path) -> None:
     _write_zip(
         zip_path,
         {
-            "addons/godot_ai/plugin.cfg": b"[plugin]\nname=ok\n",
-            "addons/godot_ai/../../escape.txt": b"escape",
+            "addons/runtime_studio/plugin.cfg": b"[plugin]\nname=ok\n",
+            "addons/runtime_studio/../../escape.txt": b"escape",
         },
     )
     with pytest.raises(ValueError, match="absolute or traversal segments"):
@@ -91,8 +91,8 @@ def test_backslash_in_entry_name_is_rejected(tmp_path: Path) -> None:
     zip_path = tmp_path / "bad.zip"
     _write_zip_with_raw_member_name(
         zip_path,
-        "addons/godot_ai/sub/windows-style.gd",
-        "addons/godot_ai/sub\\windows-style.gd",
+        "addons/runtime_studio/sub/windows-style.gd",
+        "addons/runtime_studio/sub\\windows-style.gd",
         b"oops",
     )
     with pytest.raises(ValueError, match="contains backslash"):
@@ -102,8 +102,8 @@ def test_backslash_in_entry_name_is_rejected(tmp_path: Path) -> None:
 def test_directory_entries_are_skipped(tmp_path: Path) -> None:
     zip_path = tmp_path / "dirs.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
-        zf.writestr("addons/godot_ai/sub/", b"")
-        zf.writestr("addons/godot_ai/plugin.cfg", b"[plugin]\nname=ok\n")
+        zf.writestr("addons/runtime_studio/sub/", b"")
+        zf.writestr("addons/runtime_studio/plugin.cfg", b"[plugin]\nname=ok\n")
     target = tmp_path / "target"
     extract_addon_from_zip(zip_path, target)
     assert (target / "plugin.cfg").is_file()
@@ -115,7 +115,7 @@ def test_entries_outside_addon_prefix_are_skipped(tmp_path: Path) -> None:
     _write_zip(
         zip_path,
         {
-            "addons/godot_ai/plugin.cfg": b"[plugin]\nname=ok\n",
+            "addons/runtime_studio/plugin.cfg": b"[plugin]\nname=ok\n",
             "README.md": b"not an addon file",
             "other/thing.txt": b"also not",
         },

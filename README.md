@@ -1,19 +1,19 @@
 <p align="center">
-  <img src="docs/hero.png" alt="Godot AI — The wait is over" width="700">
+  <img src="docs/hero.png" alt="Runtime Studio for Godot — The wait is over" width="700">
 </p>
 
-# Godot AI
+# Runtime Studio for Godot
 
-[![CI](https://github.com/hi-godot/godot-ai/actions/workflows/ci.yml/badge.svg)](https://github.com/hi-godot/godot-ai/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/hi-godot/godot-ai/graph/badge.svg)](https://codecov.io/gh/hi-godot/godot-ai)
+[![CI](https://github.com/Clubhouse1661/runtime-studio-godot/actions/workflows/ci.yml/badge.svg)](https://github.com/Clubhouse1661/runtime-studio-godot/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/Clubhouse1661/runtime-studio-godot/graph/badge.svg)](https://codecov.io/gh/Clubhouse1661/runtime-studio-godot)
 [![Godot Asset Library](https://img.shields.io/badge/Godot-Asset%20Library-478cbf?logo=godotengine&logoColor=white)](https://godotengine.org/asset-library/asset/5050)
 [![Discord](https://img.shields.io/badge/Discord-Join%20chat-5865F2?logo=discord&logoColor=white)](https://discord.gg/FDZ5fr2QkP)
 
 **Connect MCP clients directly to a live Godot editor** via the [Model Context Protocol](https://modelcontextprotocol.io/introduction). Over **120 ops across ~39 MCP tools** ([full list](docs/TOOLS.md)) let AI assistants (Claude Code, Codex, Antigravity, etc.) build scenes, edit nodes and scripts, wire signals, and configure UI, materials, animations, particles, cameras, and environments.
 
-> 🎉 **Now on the [Godot Asset Library](https://godotengine.org/asset-library/asset/5050) and the [new Godot Asset Store](https://store.godotengine.org/asset/dlight/godot-ai/)** — one-click install from Godot's **AssetLib** tab. You'll still need [uv](https://docs.astral.sh/uv/) for the Python server (see [Quick Start](#quick-start)).
+> 🎉 **Now on the [Godot Asset Library](https://godotengine.org/asset-library/asset/5050) and the [new Godot Asset Store](https://store.godotengine.org/asset/dlight/runtime-studio-godot/)** — one-click install from Godot's **AssetLib** tab. You'll still need [uv](https://docs.astral.sh/uv/) for the Python server (see [Quick Start](#quick-start)).
 
-<img src="docs/images/assetlib.png" alt="Godot AI on the Godot Asset Library" width="312">
+<img src="docs/images/assetlib.png" alt="Runtime Studio for Godot on the Godot Asset Library" width="312">
 
 > 💬 **[Join the Discord](https://discord.gg/FDZ5fr2QkP)** — questions, showcases, and contributor chat.
 
@@ -21,7 +21,7 @@
 
 <p align="center">
   <img src="docs/images/huddemo.gif" alt="Cyberpunk HUD demo" width="800"><br>
-  <em>UI demo built in ~2 hours with zero coding, zero image gen, all programmatically drawn by Godot AI — <a href="https://github.com/hi-godot/cyberpunk-hud-demo">source</a></em>
+  <em>UI demo built in ~2 hours with zero coding, zero image gen, all programmatically drawn by Runtime Studio for Godot — <a href="https://github.com/hi-godot/cyberpunk-hud-demo">source</a></em>
 </p>
 
 ---
@@ -42,16 +42,16 @@
 **Recommended — install from source** (always the latest):
 
 ```bash
-git clone https://github.com/hi-godot/godot-ai.git
-cp -r godot-ai/plugin/addons/godot_ai your-project/addons/
+git clone https://github.com/Clubhouse1661/runtime-studio-godot.git
+cp -r runtime-studio-godot/plugin/addons/runtime_studio your-project/addons/
 ```
 
-Or [download the latest release ZIP](https://github.com/hi-godot/godot-ai/releases/latest) and extract `addons/godot_ai` into your project's `addons/` folder.
+Or [download the latest release ZIP](https://github.com/Clubhouse1661/runtime-studio-godot/releases/latest) and extract `addons/runtime_studio` into your project's `addons/` folder.
 
 <details>
 <summary>Or via the Godot Asset Library</summary>
 
-In Godot, open the **AssetLib** tab, search for **Godot AI**, click **Download**, then **Install**. Note: Asset Library updates lag behind GitHub, so this version may not be the most recent.
+In Godot, open the **AssetLib** tab, search for **Runtime Studio for Godot**, click **Download**, then **Install**. Note: Asset Library updates lag behind GitHub, so this version may not be the most recent.
 
 > 🚨 **If installing from the Asset Library**, most issues can be resolved by disabling and re-enabling the plugin in **Project > Project Settings > Plugins**.
 
@@ -59,11 +59,11 @@ In Godot, open the **AssetLib** tab, search for **Godot AI**, click **Download**
 
 ### 2. Enable the plugin
 
-In Godot: **Project > Project Settings > Plugins** — enable **Godot AI**.
+In Godot: **Project > Project Settings > Plugins** — enable **Runtime Studio for Godot**.
 
-The plugin will automatically start the MCP server, connect over WebSocket, and show status in the **Godot AI** dock.
+The plugin will automatically start the MCP server, connect over WebSocket, and show status in the **Runtime Studio for Godot** dock.
 
-<p align="center"><img src="docs/images/dock.png" alt="Godot AI dock — Clients & Tools button highlighted" width="350"></p>
+<p align="center"><img src="docs/images/dock.png" alt="Runtime Studio for Godot dock — Clients & Tools button highlighted" width="350"></p>
 
 ### 3. Connect your MCP client
 
@@ -97,7 +97,7 @@ snippet.
 <p align="center">
   <img src="docs/images/blockarena.gif" alt="Block-world game scene built from MCP tool calls — voxel terrain, player, and UI" width="640">
 </p>
-<p align="center"><em>Demo gamelet with sophisticated save system built from a handful of Godot AI MCP prompts. Code and Godot project  <a href="https://github.com/dsarno/save-system-godot-claude">available free here</a>.</em></p>
+<p align="center"><em>Demo gamelet with sophisticated save system built from a handful of Runtime Studio for Godot MCP prompts. Code and Godot project  <a href="https://github.com/dsarno/save-system-godot-claude">available free here</a>.</em></p>
 
 ---
 
@@ -109,13 +109,13 @@ snippet.
 **Claude Code**
 
 ```bash
-claude mcp add --scope user --transport http godot-ai http://127.0.0.1:8000/mcp
+claude mcp add --scope user --transport http runtime-studio-godot http://127.0.0.1:8000/mcp
 ```
 
 **Codex** (`~/.codex/config.toml`)
 
 ```toml
-[mcp_servers."godot-ai"]
+[mcp_servers."runtime-studio-godot"]
 url = "http://127.0.0.1:8000/mcp"
 enabled = true
 ```
@@ -125,7 +125,7 @@ enabled = true
 ```json
 {
   "mcpServers": {
-    "godot-ai": {
+    "runtime-studio-godot": {
       "serverUrl": "http://127.0.0.1:8000/mcp",
       "disabled": false
     }
@@ -167,7 +167,7 @@ error: Failed to install: pywin32-311-cp313-cp313-win_amd64.whl (pywin32==311)
 
 Cause: uv hard-links shared `.pyd` files (notably
 `pydantic_core/_pydantic_core.cp313-win_amd64.pyd`) from `archive-v0\` into
-each new `builds-v0\.tmpXXXXXX\` build venv. The running `godot-ai` Python
+each new `builds-v0\.tmpXXXXXX\` build venv. The running `runtime-studio-godot` Python
 process has the same `.pyd` mapped via `LoadLibrary` — and because hard
 links share the inode, Windows refuses to delete it under any path until
 every process unmaps it. uv's post-install cleanup of the build venv then
@@ -179,7 +179,7 @@ package in the resolution order, not the actual lock holder.
 1. `_stop_server` and `force_restart_server` both call
    `McpUvCacheCleanup.purge_stale_builds()` immediately after killing the
    server children, while the `.pyd` is briefly unmapped. See
-   [`plugin/addons/godot_ai/utils/uv_cache_cleanup.gd`](plugin/addons/godot_ai/utils/uv_cache_cleanup.gd).
+   [`plugin/addons/runtime_studio/utils/uv_cache_cleanup.gd`](plugin/addons/runtime_studio/utils/uv_cache_cleanup.gd).
 2. **Auto-configure now writes `UV_LINK_MODE=copy` into the bridged
    entry's `env` block** for every uvx-bridge client (Claude Desktop, Zed),
    telling uv to copy shared C extensions instead of hard-linking them.
@@ -193,7 +193,7 @@ The shape `client_configure` writes for Claude Desktop is now:
 ```json
 {
   "mcpServers": {
-    "godot-ai": {
+    "runtime-studio-godot": {
       "command": "uvx",
       "args": ["mcp-proxy==0.11.0", "--transport", "streamablehttp", "http://127.0.0.1:8000/mcp"],
       "env": { "UV_LINK_MODE": "copy" }
@@ -204,7 +204,7 @@ The shape `client_configure` writes for Claude Desktop is now:
 
 If you've already hit the lock on an older config, click **Configure**
 on the affected uvx-bridge client (Claude Desktop *or* Zed) in the
-godot-ai dock to rewrite the entry with the env pin, then quit and
+runtime-studio-godot dock to rewrite the entry with the env pin, then quit and
 reopen that client. If the lock persists (rare — pre-existing orphans
 the cache sweeper couldn't reach), kill stray `python.exe` children
 whose command line contains `spawn_main(parent_pid=...)` and delete
@@ -217,19 +217,19 @@ whose command line contains `spawn_main(parent_pid=...)` and delete
 
 See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development setup, testing, and PR guidelines.
 
-**Windows contributors:** run `.\script\setup-dev.ps1` in PowerShell. It builds `test_project\addons\godot_ai` as a directory junction — no admin rights and no Windows Developer Mode required.
+**Windows contributors:** run `.\script\setup-dev.ps1` in PowerShell. It builds `test_project\addons\runtime_studio` as a directory junction — no admin rights and no Windows Developer Mode required.
 
 </details>
 
 <details>
 <summary><strong>Telemetry &amp; Privacy</strong></summary>
 
-Godot AI ships anonymous, privacy-focused telemetry (no code, no scene contents, no project or file names, no personal data). Project-directory slugs are sha256-hashed before any event leaves your machine; only an anonymous installation UUID, the tool/event name, success/duration, and platform/version fields are sent.
+Runtime Studio for Godot ships anonymous, privacy-focused telemetry (no code, no scene contents, no project or file names, no personal data). Project-directory slugs are sha256-hashed before any event leaves your machine; only an anonymous installation UUID, the tool/event name, success/duration, and platform/version fields are sent.
 
 Opt out by setting either environment variable to `true`:
 
 ```bash
-export GODOT_AI_DISABLE_TELEMETRY=true
+export RUNTIME_STUDIO_DISABLE_TELEMETRY=true
 # or the cross-tool convention
 export DISABLE_TELEMETRY=true
 ```
@@ -244,10 +244,10 @@ Full details (what's collected, where data lives, how to self-host the endpoint)
 
 ## Star History
 
-<a href="https://star-history.com/#hi-godot/godot-ai&Date">
-  <img src="https://api.star-history.com/svg?repos=hi-godot/godot-ai&type=Date" alt="Star History Chart" width="700">
+<a href="https://star-history.com/#Clubhouse1661/runtime-studio-godot&Date">
+  <img src="https://api.star-history.com/svg?repos=Clubhouse1661/runtime-studio-godot&type=Date" alt="Star History Chart" width="700">
 </a>
 
 ---
 
-**License:** [MIT](LICENSE) | **Issues:** [GitHub](https://github.com/hi-godot/godot-ai/issues)
+**License:** [MIT](LICENSE) | **Issues:** [GitHub](https://github.com/Clubhouse1661/runtime-studio-godot/issues)

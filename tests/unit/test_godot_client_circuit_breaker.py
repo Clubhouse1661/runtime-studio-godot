@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import pytest
 
-from godot_ai.godot_client.circuit_breaker import EditorBridgeCircuitBreaker
-from godot_ai.godot_client.client import GodotClient, GodotCommandError
-from godot_ai.protocol.envelope import CommandResponse, ErrorDetail
-from godot_ai.sessions.registry import Session, SessionRegistry
+from runtime_studio.godot_client.circuit_breaker import EditorBridgeCircuitBreaker
+from runtime_studio.godot_client.client import GodotClient, GodotCommandError
+from runtime_studio.protocol.envelope import CommandResponse, ErrorDetail
+from runtime_studio.sessions.registry import Session, SessionRegistry
 
 
 class _FakeClock:

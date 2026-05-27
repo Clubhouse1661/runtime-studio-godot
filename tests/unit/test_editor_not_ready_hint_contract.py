@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 
 
 def test_scene_path_no_scene_error_carries_editor_state_payload() -> None:
@@ -53,7 +53,11 @@ def test_python_gate_payload_uses_editor_state_key_not_legacy_state() -> None:
     name, same shape, regardless of which non-writable condition triggers
     the error."""
     source = (
-        Path(__file__).resolve().parents[2] / "src" / "godot_ai" / "handlers" / "_readiness.py"
+        Path(__file__).resolve().parents[2]
+        / "src"
+        / "runtime_studio"
+        / "handlers"
+        / "_readiness.py"
     ).read_text(encoding="utf-8")
     assert '"editor_state": session.readiness' in source
     assert '"hint": hint' in source

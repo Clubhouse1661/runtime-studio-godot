@@ -26,7 +26,7 @@ permissions:
 
 ## Block telemetry from CI — same rationale as ci.yml.
 env:
-  GODOT_AI_DISABLE_TELEMETRY: "true"
+  RUNTIME_STUDIO_DISABLE_TELEMETRY: "true"
 
 jobs:
   bump:
@@ -37,7 +37,7 @@ jobs:
       - name: Read current version
         id: current
         run: |
-          version=$(grep '^version=' plugin/addons/godot_ai/plugin.cfg | sed 's/version="//' | sed 's/"//')
+          version=$(grep '^version=' plugin/addons/runtime_studio/plugin.cfg | sed 's/version="//' | sed 's/"//')
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
       - name: Compute new version
@@ -55,7 +55,7 @@ jobs:
         run: |
           NEW="${{ steps.next.outputs.version }}"
           OLD="${{ steps.current.outputs.version }}"
-          sed -i "s/version=\"${OLD}\"/version=\"${NEW}\"/" plugin/addons/godot_ai/plugin.cfg
+          sed -i "s/version=\"${OLD}\"/version=\"${NEW}\"/" plugin/addons/runtime_studio/plugin.cfg
           sed -i "s/^version = \"${OLD}\"/version = \"${NEW}\"/" pyproject.toml
 
       - name: Commit, tag, and push
@@ -63,7 +63,7 @@ jobs:
           NEW="${{ steps.next.outputs.version }}"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add plugin/addons/godot_ai/plugin.cfg pyproject.toml
+          git add plugin/addons/runtime_studio/plugin.cfg pyproject.toml
           git commit -m "Bump version to ${NEW}"
           git tag "v${NEW}"
           git push origin main --tags

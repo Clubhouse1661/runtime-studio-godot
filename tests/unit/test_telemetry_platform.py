@@ -12,17 +12,17 @@ from unittest.mock import patch
 
 import pytest
 
-from godot_ai import telemetry as tel
+from runtime_studio import telemetry as tel
 
 
 @pytest.fixture
 def clean_env(monkeypatch) -> None:
     for name in (
-        "GODOT_AI_DISABLE_TELEMETRY",
+        "RUNTIME_STUDIO_DISABLE_TELEMETRY",
         "DISABLE_TELEMETRY",
-        "GODOT_AI_TELEMETRY_ENDPOINT",
-        "GODOT_AI_TELEMETRY_TIMEOUT",
-        "GODOT_AI_TELEMETRY_ALLOW_LOOPBACK",
+        "RUNTIME_STUDIO_TELEMETRY_ENDPOINT",
+        "RUNTIME_STUDIO_TELEMETRY_TIMEOUT",
+        "RUNTIME_STUDIO_TELEMETRY_ALLOW_LOOPBACK",
         "APPDATA",
         "XDG_DATA_HOME",
     ):
@@ -54,44 +54,44 @@ class TestResolveDataDirectory:
             def home():
                 return MockPath("/home/test")
 
-        with patch("godot_ai.telemetry.sys.platform", "win32"):
-            with patch("godot_ai.telemetry.Path", MockPath):
+        with patch("runtime_studio.telemetry.sys.platform", "win32"):
+            with patch("runtime_studio.telemetry.Path", MockPath):
                 result = tel.TelemetryConfig._resolve_data_directory()
-        assert result.name == "godot-ai"
+        assert result.name == "runtime-studio-godot"
         assert "Roaming" in str(result)
 
     def test_windows_fallback_to_home(self, monkeypatch, clean_env) -> None:
         """Windows falls back to user's home if APPDATA is unset."""
         monkeypatch.setenv("APPDATA", "")
-        with patch("godot_ai.telemetry.sys.platform", "win32"):
-            with patch("godot_ai.telemetry.Path.home", return_value=Path("C:\\Users\\Test")):
+        with patch("runtime_studio.telemetry.sys.platform", "win32"):
+            with patch("runtime_studio.telemetry.Path.home", return_value=Path("C:\\Users\\Test")):
                 result = tel.TelemetryConfig._resolve_data_directory()
-        assert "godot-ai" in str(result)
+        assert "runtime-studio-godot" in str(result)
         assert "Test" in str(result)
 
     def test_macos_uses_library_application_support(self, monkeypatch, clean_env) -> None:
         """macOS uses ~/Library/Application Support."""
-        with patch("godot_ai.telemetry.sys.platform", "darwin"):
+        with patch("runtime_studio.telemetry.sys.platform", "darwin"):
             result = tel.TelemetryConfig._resolve_data_directory()
         assert "Library" in str(result)
         assert "Application Support" in str(result)
-        assert result.name == "godot-ai"
+        assert result.name == "runtime-studio-godot"
 
     def test_linux_uses_xdg_data_home(self, monkeypatch, clean_env) -> None:
         """Linux uses XDG_DATA_HOME when set."""
-        with patch("godot_ai.telemetry.sys.platform", "linux"):
+        with patch("runtime_studio.telemetry.sys.platform", "linux"):
             monkeypatch.setenv("XDG_DATA_HOME", "/custom/data")
             result = tel.TelemetryConfig._resolve_data_directory()
-        assert str(result).replace("\\", "/") == "/custom/data/godot-ai"
+        assert str(result).replace("\\", "/") == "/custom/data/runtime-studio-godot"
 
     def test_linux_fallback_to_home(self, monkeypatch, clean_env) -> None:
         """Linux falls back to ~/.local/share when XDG_DATA_HOME unset."""
-        with patch("godot_ai.telemetry.sys.platform", "linux"):
-            with patch("godot_ai.telemetry.Path.home", return_value=Path("/home/user")):
+        with patch("runtime_studio.telemetry.sys.platform", "linux"):
+            with patch("runtime_studio.telemetry.Path.home", return_value=Path("/home/user")):
                 result = tel.TelemetryConfig._resolve_data_directory()
         assert ".local" in str(result)
         assert "share" in str(result)
-        assert "godot-ai" in str(result)
+        assert "runtime-studio-godot" in str(result)
 
 
 class TestCleanupLocalFilesEdgeCases:
@@ -99,7 +99,7 @@ class TestCleanupLocalFilesEdgeCases:
 
     def test_returns_early_when_resolve_raises(self, monkeypatch, clean_env) -> None:
         """Returns early when _resolve_data_directory raises an exception."""
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "true")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
 
         def _raise(*args):
             raise OSError("simulated failure")
@@ -119,7 +119,7 @@ class TestCleanupLocalFilesEdgeCases:
             _resolve_data_directory = mock_resolve
 
         monkeypatch.setattr(tel, "TelemetryConfig", MockConfig)
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "true")
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "ftp://test-leak-guard.invalid/")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "ftp://test-leak-guard.invalid/")
         config = tel.TelemetryConfig()
         assert config.enabled is False

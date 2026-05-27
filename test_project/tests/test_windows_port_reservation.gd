@@ -197,7 +197,7 @@ func test_hint_matches_port_in_use() -> void:
 
 func test_hint_matches_modulenotfound() -> void:
 	var lines := PackedStringArray([
-		"ModuleNotFoundError: No module named 'godot_ai'",
+		"ModuleNotFoundError: No module named 'runtime_studio'",
 	])
 	var hint := McpWindowsPortReservation.hint_from_output(lines, 8000)
 	assert_contains(hint, "uv cache clean", "hint should recommend cache clean")

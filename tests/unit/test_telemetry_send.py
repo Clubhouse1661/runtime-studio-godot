@@ -1,4 +1,4 @@
-"""Coverage-targeted tests for the parts of ``godot_ai.telemetry`` that
+"""Coverage-targeted tests for the parts of ``runtime_studio.telemetry`` that
 the other test files mock out:
 
 * ``TelemetryCollector._send`` — the real httpx POST path (and its
@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from godot_ai import telemetry as tel
+from runtime_studio import telemetry as tel
 
 # --- shared fixtures -----------------------------------------------------
 ## ``isolated_data_dir`` comes from ``tests/unit/conftest.py``.
@@ -30,11 +30,11 @@ from godot_ai import telemetry as tel
 @pytest.fixture
 def clean_env(monkeypatch) -> None:
     for name in (
-        "GODOT_AI_DISABLE_TELEMETRY",
+        "RUNTIME_STUDIO_DISABLE_TELEMETRY",
         "DISABLE_TELEMETRY",
-        "GODOT_AI_TELEMETRY_ENDPOINT",
-        "GODOT_AI_TELEMETRY_TIMEOUT",
-        "GODOT_AI_TELEMETRY_ALLOW_LOOPBACK",
+        "RUNTIME_STUDIO_TELEMETRY_ENDPOINT",
+        "RUNTIME_STUDIO_TELEMETRY_TIMEOUT",
+        "RUNTIME_STUDIO_TELEMETRY_ALLOW_LOOPBACK",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -61,10 +61,10 @@ class TestSendOverHttpx:
         ## Telemetry is on-by-default with a baked-in endpoint, so we
         ## clear the resolved value to simulate the "invalid override
         ## fell back to empty" path (e.g. a self-host that set a
-        ## malformed GODOT_AI_TELEMETRY_ENDPOINT).
+        ## malformed RUNTIME_STUDIO_TELEMETRY_ENDPOINT).
         collector = tel.TelemetryCollector()
         collector.config.endpoint = ""
-        with patch("godot_ai.telemetry.httpx.Client") as client_cls:
+        with patch("runtime_studio.telemetry.httpx.Client") as client_cls:
             collector._send(_record())
         client_cls.assert_not_called()
         collector.shutdown()
@@ -78,7 +78,7 @@ class TestSendOverHttpx:
         collector = tel.TelemetryCollector()
         collector.config.endpoint = ""  # simulate empty-endpoint mode
         caplog.clear()
-        with caplog.at_level(logging.DEBUG, logger="godot-ai-telemetry"):
+        with caplog.at_level(logging.DEBUG, logger="runtime-studio-godot-telemetry"):
             for _ in range(50):
                 collector._send(_record())
         endpoint_msgs = [r for r in caplog.records if "endpoint unset" in r.getMessage()]
@@ -86,13 +86,13 @@ class TestSendOverHttpx:
         collector.shutdown()
 
     def test_posts_when_endpoint_set(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         collector = tel.TelemetryCollector()
 
         client_inst = MagicMock()
         client_inst.post.return_value = MagicMock(status_code=200)
 
-        with patch("godot_ai.telemetry.httpx.Client", return_value=client_inst):
+        with patch("runtime_studio.telemetry.httpx.Client", return_value=client_inst):
             collector._send(_record())
 
         client_inst.post.assert_called_once()
@@ -118,13 +118,13 @@ class TestSendOverHttpx:
         overhead). Locks in the behavior change vs. the original
         per-record ``with httpx.Client(...)`` pattern.
         """
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         collector = tel.TelemetryCollector()
 
         client_inst = MagicMock()
         client_inst.post.return_value = MagicMock(status_code=200)
 
-        with patch("godot_ai.telemetry.httpx.Client", return_value=client_inst) as ctor:
+        with patch("runtime_studio.telemetry.httpx.Client", return_value=client_inst) as ctor:
             for _ in range(5):
                 collector._send(_record())
 
@@ -137,13 +137,13 @@ class TestSendOverHttpx:
     def test_includes_milestone_field_when_set(
         self, monkeypatch, clean_env, isolated_data_dir
     ) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         collector = tel.TelemetryCollector()
 
         client_inst = MagicMock()
         client_inst.post.return_value = MagicMock(status_code=200)
 
-        with patch("godot_ai.telemetry.httpx.Client", return_value=client_inst):
+        with patch("runtime_studio.telemetry.httpx.Client", return_value=client_inst):
             collector._send(_record(milestone=tel.MilestoneType.FIRST_STARTUP))
 
         payload = client_inst.post.call_args.kwargs["json"]
@@ -154,13 +154,13 @@ class TestSendOverHttpx:
     def test_non_2xx_does_not_raise(
         self, monkeypatch, clean_env, isolated_data_dir, caplog
     ) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         collector = tel.TelemetryCollector()
 
         client_inst = MagicMock()
         client_inst.post.return_value = MagicMock(status_code=500)
 
-        with patch("godot_ai.telemetry.httpx.Client", return_value=client_inst):
+        with patch("runtime_studio.telemetry.httpx.Client", return_value=client_inst):
             collector._send(_record())  # must not raise
 
         collector.shutdown()
@@ -168,13 +168,13 @@ class TestSendOverHttpx:
     def test_httperror_is_swallowed(self, monkeypatch, clean_env, isolated_data_dir) -> None:
         import httpx as _httpx
 
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         collector = tel.TelemetryCollector()
 
         client_inst = MagicMock()
         client_inst.post.side_effect = _httpx.HTTPError("nope")
 
-        with patch("godot_ai.telemetry.httpx.Client", return_value=client_inst):
+        with patch("runtime_studio.telemetry.httpx.Client", return_value=client_inst):
             collector._send(_record())  # must not raise
 
         collector.shutdown()
@@ -291,7 +291,7 @@ class TestModuleSingleton:
     ) -> None:
         assert tel.is_telemetry_enabled() is True
         tel.reset_telemetry()
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "true")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
         assert tel.is_telemetry_enabled() is False
 
 
@@ -387,12 +387,12 @@ class TestEndpointValidationEdges:
         ## A urlparse-shaped exception is the docstring case for the
         ## try/except in _is_valid_endpoint; force it via a patch since
         ## stdlib urlparse rarely raises ValueError in practice.
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
-        with patch("godot_ai.telemetry.urlparse", side_effect=ValueError("nope")):
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
+        with patch("runtime_studio.telemetry.urlparse", side_effect=ValueError("nope")):
             assert tel.TelemetryConfig().endpoint == ""
 
     def test_missing_netloc_rejected(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://")
         assert tel.TelemetryConfig().endpoint == ""
 
 
@@ -423,9 +423,9 @@ class TestDataDirectory:
     per-OS code is exercised by the matrix; don't reintroduce the leak.
     """
 
-    def test_returns_godot_ai_named_dir_on_current_platform(self, tmp_path) -> None:
+    def test_returns_runtime_studio_named_dir_on_current_platform(self, tmp_path) -> None:
         result = tel.TelemetryConfig._get_data_directory()
-        assert result.name == "godot-ai"
+        assert result.name == "runtime-studio-godot"
 
     def test_xdg_override_used_on_linux(self, monkeypatch, tmp_path) -> None:
         import sys as _sys
@@ -435,7 +435,7 @@ class TestDataDirectory:
         monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "xdg"))
         result = tel.TelemetryConfig._get_data_directory()
         assert str(result).startswith(str(tmp_path / "xdg"))
-        assert result.name == "godot-ai"
+        assert result.name == "runtime-studio-godot"
 
     def test_mkdir_failure_is_swallowed(self, monkeypatch, tmp_path) -> None:
         import sys as _sys
@@ -447,14 +447,14 @@ class TestDataDirectory:
         original_mkdir = Path.mkdir
 
         def boom(self, *args, **kwargs):
-            if self.name == "godot-ai":
+            if self.name == "runtime-studio-godot":
                 raise OSError("read-only fs")
             return original_mkdir(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "mkdir", boom)
         ## Should not raise; data_dir is returned even if mkdir failed.
         result = tel.TelemetryConfig._get_data_directory()
-        assert result.name == "godot-ai"
+        assert result.name == "runtime-studio-godot"
 
 
 # --- persistent data: uuid + milestones edge paths ----------------------
@@ -550,7 +550,7 @@ class TestPersistentDataEdges:
     def test_record_milestone_returns_false_when_disabled(
         self, monkeypatch, clean_env, isolated_data_dir: Path
     ) -> None:
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "1")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "1")
         collector = tel.TelemetryCollector()
         result = collector.record_milestone(tel.MilestoneType.FIRST_STARTUP)
         assert result is False
@@ -580,7 +580,7 @@ class TestShutdownEdges:
         """
         import threading
 
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         ## SHUTDOWN_TIMEOUT defaults to 2.0s; force a tighter window
         ## so we don't slow the test suite waiting for it.
         monkeypatch.setattr(tel.TelemetryCollector, "SHUTDOWN_TIMEOUT", 0.2)
@@ -628,5 +628,5 @@ def _join_lingering_threads():
     for thr in list(threading.enumerate()):
         if thr is threading.main_thread():
             continue
-        if thr.name.startswith("godot-ai-telemetry"):
+        if thr.name.startswith("runtime-studio-godot-telemetry"):
             thr.join(timeout=0.5)

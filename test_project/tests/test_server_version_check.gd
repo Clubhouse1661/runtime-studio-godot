@@ -9,10 +9,10 @@ extends McpTestSuite
 ## the result transitions.
 
 const McpServerVersionCheckScript := preload(
-	"res://addons/godot_ai/utils/server_version_check.gd"
+	"res://addons/runtime_studio/utils/server_version_check.gd"
 )
 const McpServerLifecycleManagerScript := preload(
-	"res://addons/godot_ai/utils/server_lifecycle.gd"
+	"res://addons/runtime_studio/utils/server_lifecycle.gd"
 )
 
 
@@ -185,5 +185,5 @@ func test_lifecycle_manager_arm_version_check_attaches_seam() -> void:
 
 
 func _make_minimal_host():
-	var GodotAiPlugin := load("res://addons/godot_ai/plugin.gd")
-	return GodotAiPlugin.new()
+	var RuntimeStudioPlugin := load("res://addons/runtime_studio/plugin.gd")
+	return RuntimeStudioPlugin.new()

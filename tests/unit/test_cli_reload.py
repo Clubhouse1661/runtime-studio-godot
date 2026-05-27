@@ -5,8 +5,8 @@ from pathlib import Path
 import fastmcp
 import pytest
 
-import godot_ai
-from godot_ai import asgi
+import runtime_studio
+from runtime_studio import asgi
 
 
 class StubServer:
@@ -36,7 +36,7 @@ def test_create_app_uses_env_config(monkeypatch):
     monkeypatch.setenv(asgi.DEV_TRANSPORT_ENV, "streamable-http")
     monkeypatch.setenv(asgi.DEV_WS_PORT_ENV, "9555")
     monkeypatch.setenv(asgi.DEV_EXCLUDE_DOMAINS_ENV, "audio,theme")
-    monkeypatch.setattr("godot_ai.server.create_server", fake_create_server)
+    monkeypatch.setattr("runtime_studio.server.create_server", fake_create_server)
 
     result = asgi.create_app()
 
@@ -65,7 +65,7 @@ def test_run_with_reload_uses_uvicorn_factory(monkeypatch):
         exclude_domains={"audio", "theme"},
     )
 
-    assert calls["app"] == "godot_ai.asgi:create_app"
+    assert calls["app"] == "runtime_studio.asgi:create_app"
     assert calls["kwargs"] == {
         "factory": True,
         "host": fastmcp.settings.host,
@@ -90,11 +90,11 @@ def test_main_uses_reloadable_runner_for_http_reload(monkeypatch):
     calls: dict[str, object] = {}
 
     monkeypatch.setattr(
-        "godot_ai.asgi.run_with_reload",
+        "runtime_studio.asgi.run_with_reload",
         lambda **kwargs: calls.setdefault("kwargs", kwargs),
     )
 
-    godot_ai.main(
+    runtime_studio.main(
         ["--transport", "streamable-http", "--port", "8123", "--ws-port", "9555", "--reload"]
     )
 
@@ -115,9 +115,9 @@ def test_main_runs_server_directly_without_reload(monkeypatch):
         calls["exclude_domains"] = exclude_domains
         return server
 
-    monkeypatch.setattr("godot_ai.server.create_server", fake_create_server)
+    monkeypatch.setattr("runtime_studio.server.create_server", fake_create_server)
 
-    godot_ai.main(["--transport", "streamable-http", "--port", "8123", "--ws-port", "9555"])
+    runtime_studio.main(["--transport", "streamable-http", "--port", "8123", "--ws-port", "9555"])
 
     assert calls["ws_port"] == 9555
     assert calls["exclude_domains"] == set()
@@ -132,9 +132,9 @@ def test_main_forwards_exclude_domains_to_create_server(monkeypatch):
         calls["exclude_domains"] = exclude_domains
         return server
 
-    monkeypatch.setattr("godot_ai.server.create_server", fake_create_server)
+    monkeypatch.setattr("runtime_studio.server.create_server", fake_create_server)
 
-    godot_ai.main(
+    runtime_studio.main(
         [
             "--transport",
             "stdio",
@@ -149,11 +149,11 @@ def test_main_forwards_exclude_domains_to_create_server(monkeypatch):
 
 def test_main_rejects_unknown_exclude_domain(monkeypatch, capsys):
     monkeypatch.setattr(
-        "godot_ai.server.create_server",
+        "runtime_studio.server.create_server",
         lambda ws_port, *, exclude_domains=None: pytest.fail("should not reach create_server"),
     )
     with pytest.raises(SystemExit) as excinfo:
-        godot_ai.main(["--transport", "stdio", "--exclude-domains", "bogus,audio"])
+        runtime_studio.main(["--transport", "stdio", "--exclude-domains", "bogus,audio"])
     assert excinfo.value.code != 0
     captured = capsys.readouterr()
     assert "Unknown or non-excludable" in captured.err
@@ -162,22 +162,22 @@ def test_main_rejects_unknown_exclude_domain(monkeypatch, capsys):
 
 def test_main_rejects_non_excludable_core_domain(monkeypatch):
     monkeypatch.setattr(
-        "godot_ai.server.create_server",
+        "runtime_studio.server.create_server",
         lambda ws_port, *, exclude_domains=None: pytest.fail("should not reach create_server"),
     )
     ## `session` has only core tools, so excluding it would be a silent no-op.
     ## The parser rejects it up front rather than letting the user think they
     ## trimmed something.
     with pytest.raises(SystemExit):
-        godot_ai.main(["--transport", "stdio", "--exclude-domains", "session"])
+        runtime_studio.main(["--transport", "stdio", "--exclude-domains", "session"])
 
 
 def test_main_version_flag(capsys):
     with pytest.raises(SystemExit) as excinfo:
-        godot_ai.main(["--version"])
+        runtime_studio.main(["--version"])
     assert excinfo.value.code == 0
     captured = capsys.readouterr()
-    assert f"godot-ai {godot_ai.__version__}" in captured.out
+    assert f"runtime-studio-godot {runtime_studio.__version__}" in captured.out
 
 
 def test_get_dev_transport_rejects_unsupported(monkeypatch):

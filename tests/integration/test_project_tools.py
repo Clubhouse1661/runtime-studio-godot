@@ -6,7 +6,7 @@ import asyncio
 
 import pytest
 
-from godot_ai.godot_client.client import GodotClient, GodotCommandError
+from runtime_studio.godot_client.client import GodotClient, GodotCommandError
 
 
 class TestProjectSettingsGet:

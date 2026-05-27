@@ -24,7 +24,7 @@ from pathlib import Path
 
 from tests.unit._gdscript_text import get_func_block
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 
 
 def test_save_to_disk_takes_pause_target() -> None:

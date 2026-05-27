@@ -7,7 +7,7 @@ from pathlib import Path
 
 from tests.unit._gdscript_text import get_func_block
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 
 
 def test_focus_in_uses_async_cooled_down_refresh_instead_of_blocking_sweep() -> None:
@@ -426,7 +426,7 @@ def test_self_update_runner_disables_old_plugin_before_extract_and_scan() -> Non
         "Skip zero-byte directory entries (rel_path empty or trailing slash) "
         "BEFORE the _is_safe_zip_addon_file check. Zips without `zip -D` "
         "(older release artifacts, AssetLib uploads, hand-built archives) "
-        "include a bare `addons/godot_ai/` directory entry; the safety "
+        "include a bare `addons/runtime_studio/` directory entry; the safety "
         "guard treats its empty rel_path as unsafe and aborts the extract, "
         "breaking self-update for any user whose installed runner sees one."
     )
@@ -447,7 +447,7 @@ def test_self_update_runner_disables_old_plugin_before_extract_and_scan() -> Non
     assert "OS.create_process" not in runner_source
     assert "get_tree().quit" not in runner_source
     assert "await " not in runner_source, (
-        "The runner script is itself under addons/godot_ai, so fs.scan() can "
+        "The runner script is itself under addons/runtime_studio, so fs.scan() can "
         "hot-reload it. It must not suspend with await across that reload; "
         "use _process/signal callbacks instead."
     )

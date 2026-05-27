@@ -1,12 +1,12 @@
-# Contributing to Godot AI
+# Contributing to Runtime Studio for Godot
 
 ## Development Setup
 
 **macOS / Linux:**
 
 ```bash
-git clone https://github.com/hi-godot/godot-ai.git
-cd godot-ai
+git clone https://github.com/Clubhouse1661/runtime-studio-godot.git
+cd runtime-studio-godot
 script/setup-dev             # creates .venv, installs deps, builds plugin symlink, installs git hooks
 source .venv/bin/activate
 ```
@@ -14,14 +14,14 @@ source .venv/bin/activate
 **Windows (PowerShell):**
 
 ```powershell
-git clone https://github.com/hi-godot/godot-ai.git
-cd godot-ai
+git clone https://github.com/Clubhouse1661/runtime-studio-godot.git
+cd runtime-studio-godot
 .\script\setup-dev.ps1       # creates .venv, installs deps, builds plugin junction, installs git hooks
 .venv\Scripts\Activate.ps1
 ```
 
-> **Plugin link is built locally, not tracked in git.** `test_project/addons/godot_ai`
-> is a symlink (Unix) or directory junction (Windows) into `plugin/addons/godot_ai`,
+> **Plugin link is built locally, not tracked in git.** `test_project/addons/runtime_studio`
+> is a symlink (Unix) or directory junction (Windows) into `plugin/addons/runtime_studio`,
 > created fresh by `setup-dev`. A clone without running `setup-dev` has no link and
 > Godot won't find the plugin. The Windows flavor uses `mklink /J`, which works
 > without admin rights and without Windows Developer Mode.
@@ -57,7 +57,7 @@ test_results_get             # review last results
 When CI starts failing, identify the regression window (last green → first red):
 
 ```bash
-script/ci-find-regression-range hi-godot/godot-ai ci.yml main
+script/ci-find-regression-range Clubhouse1661/runtime-studio-godot ci.yml main
 ```
 
 If your local clone has a valid `origin` GitHub remote, you can omit `owner/repo`:
@@ -74,7 +74,7 @@ For changes that touch self-update, plugin reload handoff, or install/extract lo
 script/local-self-update-smoke
 ```
 
-It creates a disposable project with a physical `addons/godot_ai/` copy, stages a synthetic v(N+1) plugin ZIP, launches Godot, and prints the single manual action: click Update in the Godot AI dock. After you close Godot normally, the script verifies the fixture version advanced, the update temp dir was consumed, and no new macOS `Godot*.ips` crash report appeared.
+It creates a disposable project with a physical `addons/runtime_studio/` copy, stages a synthetic v(N+1) plugin ZIP, launches Godot, and prints the single manual action: click Update in the Runtime Studio for Godot dock. After you close Godot normally, the script verifies the fixture version advanced, the update temp dir was consumed, and no new macOS `Godot*.ips` crash report appeared.
 
 ### Self-update compatibility rules
 
@@ -89,10 +89,10 @@ Self-update safety depends on the installed runner. Releases that include the fi
 For Python-side changes without restarting Godot:
 
 ```bash
-python -m godot_ai --transport streamable-http --port 8000 --reload
+python -m runtime_studio --transport streamable-http --port 8000 --reload
 ```
 
-The Godot AI dock also has a **Start/Stop Dev Server** button when running from a dev checkout.
+The Runtime Studio for Godot dock also has a **Start/Stop Dev Server** button when running from a dev checkout.
 
 ## PR Workflow
 

@@ -10,13 +10,13 @@ extends McpTestSuite
 ## End-to-end click-Update is exercised by `script/local-self-update-smoke`.
 
 const McpUpdateManagerScript := preload(
-	"res://addons/godot_ai/utils/update_manager.gd"
+	"res://addons/runtime_studio/utils/update_manager.gd"
 )
-const GodotAiPlugin := preload("res://addons/godot_ai/plugin.gd")
-const McpDockScript := preload("res://addons/godot_ai/mcp_dock.gd")
+const RuntimeStudioPlugin := preload("res://addons/runtime_studio/plugin.gd")
+const McpDockScript := preload("res://addons/runtime_studio/mcp_dock.gd")
 
-const TEST_ASSET_NAME := "godot-ai-plugin.zip"
-const TEST_ASSET_URL := "https://github.com/hi-godot/godot-ai/releases/download/v999.0.0/godot-ai-plugin.zip"
+const TEST_ASSET_NAME := "runtime-studio-godot-plugin.zip"
+const TEST_ASSET_URL := "https://github.com/Clubhouse1661/runtime-studio-godot/releases/download/v999.0.0/runtime-studio-godot-plugin.zip"
 
 
 func suite_name() -> String:
@@ -63,7 +63,7 @@ func test_parse_releases_response_yes_update_when_remote_newer() -> void:
 	assert_eq(String(result.get("version", "")), "999.0.0",
 		"Returned version must strip the leading 'v' from the tag")
 	assert_eq(String(result.get("download_url", "")), TEST_ASSET_URL,
-		"Asset URL must be the matching godot-ai-plugin.zip download")
+		"Asset URL must be the matching runtime-studio-godot-plugin.zip download")
 	assert_contains(String(result.get("label_text", "")), "Update available",
 		"Label text must lead with 'Update available' for the dock to render")
 	assert_contains(String(result.get("label_text", "")), "999.0.0",
@@ -98,7 +98,7 @@ func test_parse_releases_response_handles_malformed_json() -> void:
 
 
 func test_parse_releases_response_missing_asset_returns_empty_url() -> void:
-	## Some manual tag pushes ship without a `godot-ai-plugin.zip` asset.
+	## Some manual tag pushes ship without a `runtime-studio-godot-plugin.zip` asset.
 	## The dock then falls back to opening the release page (the manager
 	## checks `download_url.is_empty()` in `start_install`).
 	var body := _make_body(JSON.stringify({
@@ -114,7 +114,7 @@ func test_parse_releases_response_missing_asset_returns_empty_url() -> void:
 	assert_true(bool(result.get("has_update", false)),
 		"Newer version still flags an update even when the asset is missing")
 	assert_eq(String(result.get("download_url", "")), "",
-		"Missing godot-ai-plugin.zip asset must surface an empty download URL")
+		"Missing runtime-studio-godot-plugin.zip asset must surface an empty download URL")
 
 
 # ---- forced-mode label hint --------------------------------------------
@@ -144,7 +144,7 @@ func test_label_includes_forced_hint_when_user_mode_override_active() -> void:
 	## Mode-override resolution lives on `McpClientConfigurator`. The
 	## manager mirrors the dock's old behaviour: when `mode_override()`
 	## returns "user" the label gets a " (forced)" suffix so testers
-	## driving `GODOT_AI_MODE=user` from a dev tree don't forget the
+	## driving `RUNTIME_STUDIO_MODE=user` from a dev tree don't forget the
 	## banner is only painting because of the override.
 	var prior := _read_mode_override()
 	_force_mode_override("user")
@@ -193,7 +193,7 @@ func test_install_in_flight_default_false() -> void:
 
 # ---- handoff to plugin.install_downloaded_update -----------------------
 
-class _RecordingPlugin extends GodotAiPlugin:
+class _RecordingPlugin extends RuntimeStudioPlugin:
 	var install_calls: Array = []
 	var prepare_calls: int = 0
 
@@ -238,7 +238,7 @@ func test_install_zip_drains_dock_workers_and_hands_off_to_plugin() -> void:
 		return
 	## Symlink check is independent of the mode override and aborts the
 	## install before the drain runs. In a dev checkout
-	## `test_project/addons/godot_ai` is a symlink, so this test is
+	## `test_project/addons/runtime_studio` is a symlink, so this test is
 	## meaningless there. Skip rather than assert the no-op path — that's
 	## already covered by `test_install_zip_aborts_on_symlinked_addons_dir`.
 	if McpClientConfigurator.addons_dir_is_symlink():
@@ -282,7 +282,7 @@ func test_install_zip_drains_dock_workers_and_hands_off_to_plugin() -> void:
 func test_install_zip_aborts_on_symlinked_addons_dir() -> void:
 	## addons_dir_is_symlink is the data-safety guard that prevents the
 	## extract from clobbering canonical `plugin/` source through a
-	## symlinked `test_project/addons/godot_ai`. The check is independent
+	## symlinked `test_project/addons/runtime_studio`. The check is independent
 	## of the mode override — even forced-user mode bails here.
 	if not McpClientConfigurator.addons_dir_is_symlink():
 		skip("Skipping symlink-bail test in a non-dev install")
@@ -353,7 +353,7 @@ func test_mode_override_dropdown_wins_over_env() -> void:
 	## of the seam shape.
 	var prior := _read_mode_override()
 	_force_mode_override("user")
-	## Even if GODOT_AI_MODE=dev is set in the environment, the dropdown
+	## Even if RUNTIME_STUDIO_MODE=dev is set in the environment, the dropdown
 	## value should win. We don't actually mutate env from a test (CI
 	## inherits its own env), so just confirm dropdown=user resolves to
 	## "user" regardless of the surrounding env.

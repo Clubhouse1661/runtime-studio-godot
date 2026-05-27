@@ -14,7 +14,7 @@ on:
 ## matches a real opted-out end-user install. Mirrored in script/ci-*
 ## shell scripts for any path that doesn't inherit this env.
 env:
-  GODOT_AI_DISABLE_TELEMETRY: "true"
+  RUNTIME_STUDIO_DISABLE_TELEMETRY: "true"
 
 jobs:
   python-tests:
@@ -48,7 +48,7 @@ jobs:
 
       - name: Run tests with coverage
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
-        run: pytest --cov=godot_ai --cov-report=xml -v
+        run: pytest --cov=runtime_studio --cov-report=xml -v
 
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
@@ -90,16 +90,16 @@ jobs:
           python -m venv "$venv"
           if [ -x "$venv/bin/python" ]; then
             PY="$venv/bin/python"
-            GODOT_AI="$venv/bin/godot-ai"
+            RUNTIME_STUDIO="$venv/bin/runtime-studio-godot"
           else
             PY="$venv/Scripts/python.exe"
-            GODOT_AI="$venv/Scripts/godot-ai.exe"
+            RUNTIME_STUDIO="$venv/Scripts/runtime-studio-godot.exe"
           fi
           # Use `python -m pip` rather than the pip executable — on Windows,
           # pip.exe can't replace itself mid-upgrade, which breaks smoke tests.
           "$PY" -m pip install dist/*.whl
-          "$GODOT_AI" --version
-          "$GODOT_AI" --help
+          "$RUNTIME_STUDIO" --version
+          "$RUNTIME_STUDIO" --help
 
       - name: Install built sdist in a clean venv
         shell: bash
@@ -108,13 +108,13 @@ jobs:
           python -m venv "$venv"
           if [ -x "$venv/bin/python" ]; then
             PY="$venv/bin/python"
-            GODOT_AI="$venv/bin/godot-ai"
+            RUNTIME_STUDIO="$venv/bin/runtime-studio-godot"
           else
             PY="$venv/Scripts/python.exe"
-            GODOT_AI="$venv/Scripts/godot-ai.exe"
+            RUNTIME_STUDIO="$venv/Scripts/runtime-studio-godot.exe"
           fi
           "$PY" -m pip install dist/*.tar.gz
-          "$GODOT_AI" --version
+          "$RUNTIME_STUDIO" --version
 
       - name: Upload build artifacts
         if: matrix.os == 'ubuntu-latest'
@@ -177,7 +177,7 @@ jobs:
 
       - name: Start Godot editor (headless)
         shell: bash
-        run: GODOT_AI_ALLOW_HEADLESS=1 godot --headless --path test_project --editor > godot-editor.log 2>&1 &
+        run: RUNTIME_STUDIO_ALLOW_HEADLESS=1 godot --headless --path test_project --editor > godot-editor.log 2>&1 &
 
       - name: Run handler tests
         shell: bash
@@ -204,7 +204,7 @@ jobs:
           tail -n 200 godot-import.log || echo "(log not found)"
 
   # Verifies the plugin's automatic kill+respawn flow when port 8000 is held
-  # by a stale godot-ai server (different version). The unit tests in
+  # by a stale runtime-studio-godot server (different version). The unit tests in
   # test_plugin_lifecycle.gd mock every OS interaction; this is the only
   # automated job that exercises the real per-OS branded-kill machinery
   # (PowerShell on Windows, /proc on Linux, ps on macOS). Replaces the

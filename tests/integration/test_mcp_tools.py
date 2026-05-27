@@ -1076,8 +1076,8 @@ class TestReloadPluginTool:
         scheduler luck — peeking the WS immediately after `call_tool()`
         returns must time out, then the command lands once the delay
         elapses."""
-        from godot_ai import runtime_info
-        from godot_ai.handlers import editor as editor_handlers
+        from runtime_studio import runtime_info
+        from runtime_studio.handlers import editor as editor_handlers
 
         monkeypatch.setattr(runtime_info, "_PID_FILE_PATH", tmp_path / "fake.pid")
         monkeypatch.setattr(editor_handlers, "PLUGIN_MANAGED_RELOAD_DELAY_SEC", 0.05)

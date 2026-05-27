@@ -1,10 +1,10 @@
 [project]
-name = "godot-ai"
+name = "runtime-studio-godot"
 version = "2.5.7"
 description = "Production-grade MCP server and AI tools for the Godot engine"
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.11"
-authors = [{ name = "Godot AI contributors" }]
+authors = [{ name = "Runtime Studio for Godot contributors" }]
 keywords = [
     "godot",
     "godot-engine",
@@ -40,10 +40,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/hi-godot/godot-ai"
-Repository = "https://github.com/hi-godot/godot-ai"
-Issues = "https://github.com/hi-godot/godot-ai/issues"
-Documentation = "https://github.com/hi-godot/godot-ai#readme"
+Homepage = "https://github.com/Clubhouse1661/runtime-studio-godot"
+Repository = "https://github.com/Clubhouse1661/runtime-studio-godot"
+Issues = "https://github.com/Clubhouse1661/runtime-studio-godot/issues"
+Documentation = "https://github.com/Clubhouse1661/runtime-studio-godot#readme"
 
 [project.optional-dependencies]
 dev = [
@@ -60,7 +60,7 @@ build = [
 ]
 
 [project.scripts]
-godot-ai = "godot_ai:main"
+runtime-studio-godot = "runtime_studio:main"
 
 [build-system]
 requires = ["setuptools>=75.0"]

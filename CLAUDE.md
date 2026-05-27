@@ -1,4 +1,4 @@
-# CLAUDE.md — Godot AI
+# CLAUDE.md — Runtime Studio for Godot
 
 ## What this project is
 
@@ -10,30 +10,30 @@ A production-grade MCP server for Godot. Python server (FastMCP v3) communicates
 AI Client → MCP (stdio/sse/streamable-http) → Python FastMCP server → WebSocket (port 9500) → Godot EditorPlugin
 ```
 
-- **Python server**: `src/godot_ai/` — FastMCP v3, async, lifespan manages WebSocket server
-- **GDScript plugin**: `plugin/addons/godot_ai/` — canonical source; symlinked into `test_project/addons/` for testing
+- **Python server**: `src/runtime_studio/` — FastMCP v3, async, lifespan manages WebSocket server
+- **GDScript plugin**: `plugin/addons/runtime_studio/` — canonical source; symlinked into `test_project/addons/` for testing
 - **Protocol**: JSON over WebSocket. Request/response with `request_id` correlation. Handshake on connect.
 - **Session model**: Multiple Godot editors can connect. Tools route through active session.
-- **Handler/Runtime layer**: Shared handlers in `src/godot_ai/handlers/` contain tool logic. They depend on `DirectRuntime`, the in-process runtime adapter. Tools and resources are thin wrappers that create a runtime and delegate.
+- **Handler/Runtime layer**: Shared handlers in `src/runtime_studio/handlers/` contain tool logic. They depend on `DirectRuntime`, the in-process runtime adapter. Tools and resources are thin wrappers that create a runtime and delegate.
 - **Readiness gating**: Write operations check session readiness (`ready`/`importing`/`playing`/`no_scene`) before executing. Plugin sends readiness in handshake and via `readiness_changed` events. Python `await require_writable_async()` in `handlers/_readiness.py` gates all write handlers; new write handlers must `await` it. Two layers self-heal a stale cache so a missed `readiness_changed` event can't strand an agent in `EDITOR_NOT_READY` against a writable editor: (1) every command response carries an envelope-level `readiness` field stamped by the plugin's dispatcher, piped through `sync_readiness_for_session` in the WebSocket transport — so the very next tool call after any state change refreshes the cache; (2) `require_writable_async` itself fires one `get_editor_state` probe before rejecting on a non-writable cached value, so the FIRST post-staleness call (which has no prior response to self-heal from) also recovers. Fast path (cache says writable) skips the probe — zero added latency in the common case. Any new plugin response builder (success, error, deferred reply, backpressure error) must include the envelope field; old plugins that omit it fall back to the event-driven path.
 
 ## Key conventions
 
-- **GDScript plugin is the canonical copy** in `plugin/`. `test_project/addons/godot_ai` is a locally-built symlink (or Windows junction) into `plugin/addons/godot_ai` — not tracked in git, created by `script/setup-dev` / `script/verify-worktree`.
+- **GDScript plugin is the canonical copy** in `plugin/`. `test_project/addons/runtime_studio` is a locally-built symlink (or Windows junction) into `plugin/addons/runtime_studio` — not tracked in git, created by `script/setup-dev` / `script/verify-worktree`.
 - **Error codes**: Defined in `protocol/errors.py` (Python) and `utils/error_codes.gd` (GDScript). Keep in sync. Use Godot's built-in `error_string(err)` to translate numeric error codes in error messages — do not write a custom lookup table.
 - **Tools return `dict`**: Handlers call `runtime.send_command(command, params)` which returns a dict or raises. Tools create a `DirectRuntime` and delegate to handlers.
 - **Plugin runs on main thread**: All GDScript executes in `_process()` with a 4ms frame budget. Never block. Use `call_deferred` for scene tree mutations.
 - **Scene paths are clean**: `/Main/Camera3D` format, not raw Godot internal paths. Use `McpScenePath.from_node(node, scene_root)` in GDScript.
-- **Class naming**: classes that need a project-wide `class_name` (i.e. used as a type annotation across multiple files) carry the `Mcp*` prefix to avoid colliding with user-project classes. Internals only used inside the plugin (handlers, presets/values, test stubs) skip `class_name` entirely and load via `const X := preload("res://addons/godot_ai/...")` from `plugin.gd` and consumers. Do not add a bare-name `class_name` for a new class — pick `Mcp*` or `preload`. The choice of `Mcp*` vs preload-only is stylistic, not a parse-safety measure; the #398 self-update parse-error class is fixed at the runner by writing one consistent snapshot before scan, and both forms are parse-safe across upgrades from the fixed release onward.
+- **Class naming**: classes that need a project-wide `class_name` (i.e. used as a type annotation across multiple files) carry the `Mcp*` prefix to avoid colliding with user-project classes. Internals only used inside the plugin (handlers, presets/values, test stubs) skip `class_name` entirely and load via `const X := preload("res://addons/runtime_studio/...")` from `plugin.gd` and consumers. Do not add a bare-name `class_name` for a new class — pick `Mcp*` or `preload`. The choice of `Mcp*` vs preload-only is stylistic, not a parse-safety measure; the #398 self-update parse-error class is fixed at the runner by writing one consistent snapshot before scan, and both forms are parse-safe across upgrades from the fixed release onward.
 - **Never delete a published `class_name` declaration**: removing `class_name X` from a class that was registered in any prior released version can trigger a "Could not resolve script" cascade during the self-update disable -> extract -> enable window. This is independent of the runner's single-phase install ordering. If a class_name must be retired, leave the original file path and `class_name` in place as a compatibility shim.
 - **MCP logging**: Plugin prints `MCP | [recv] command(params)` / `MCP | [send] command -> ok` to Godot console. Controlled by `mcp_logging` var.
-- **Tool surface — ~18 named verbs + per-domain `<domain>_manage` rollups**: To stay under hard tool-count caps in clients that ignore Anthropic's `defer_loading` (Antigravity, etc.), each domain exposes one rolled-up MCP tool that takes `op="<verb>"` + a `params` dict, alongside the high-traffic verbs as named tools. Schema-aware clients still see every `op` because `register_manage_tool` in `src/godot_ai/tools/_meta_tool.py` builds a dynamic `Literal[...]` enum. Core tools (`editor_state`, `scene_get_hierarchy`, `node_get_properties`, `session_activate`) stay non-deferred; named non-core verbs and every `<domain>_manage` rollup are tagged `meta={"defer_loading": True}` for tool-search-aware clients. Plugin command names (over WebSocket) are independent — the MCP tool `editor_reload_plugin` dispatches the plugin command `reload_plugin`. See `docs/TOOLS.md` for the full op map.
+- **Tool surface — ~18 named verbs + per-domain `<domain>_manage` rollups**: To stay under hard tool-count caps in clients that ignore Anthropic's `defer_loading` (Antigravity, etc.), each domain exposes one rolled-up MCP tool that takes `op="<verb>"` + a `params` dict, alongside the high-traffic verbs as named tools. Schema-aware clients still see every `op` because `register_manage_tool` in `src/runtime_studio/tools/_meta_tool.py` builds a dynamic `Literal[...]` enum. Core tools (`editor_state`, `scene_get_hierarchy`, `node_get_properties`, `session_activate`) stay non-deferred; named non-core verbs and every `<domain>_manage` rollup are tagged `meta={"defer_loading": True}` for tool-search-aware clients. Plugin command names (over WebSocket) are independent — the MCP tool `editor_reload_plugin` dispatches the plugin command `reload_plugin`. See `docs/TOOLS.md` for the full op map.
 - **Tool resources alongside tools**: Read-only `godot://...` URIs mirror the most-used reads (`godot://node/{path}/properties`, `godot://script/{path}`, `godot://materials`, …). Resources don't count against tool caps; tool forms are the fallback for clients that don't surface resources, and the only path that supports per-call `session_id` pinning. When a tool has a resource counterpart, its description appends `Resource form: godot://...` so aware clients can route the cheap reads through the URI.
-- **`batch_execute` uses plugin command names, not MCP tool names**: The MCP tool `node_create` dispatches the plugin command `create_node`. Inside `batch_execute`'s `commands[].command` field, use the plugin name (`create_node`), not the MCP name (`node_create`). Inside a `<domain>_manage` op, the same rule applies — `node_manage(op="delete", params={...})` delegates to the plugin's `delete_node`, not `node_delete`. The Python handlers in `src/godot_ai/handlers/` are the authoritative map — each handler calls `runtime.send_command("<plugin_cmd>", ...)`. When `batch_execute` receives an unknown plugin command, the GDScript dispatcher returns `INVALID_PARAMS` with fuzzy `data.suggestions`. Inside a `<domain>_manage` rollup, op-name validation happens earlier — at the FastMCP/Pydantic schema boundary, since `op` is typed `Literal[...]` of the registered op names. A misspelling like `theme_manage(op="set_colour")` surfaces as a Pydantic `literal_error` whose message lists the valid alternatives ("Input should be 'create', 'set_color', …"), not a structured `data.suggestions` payload. The meta-tool's own `difflib`-based fallback in `dispatch_manage_op` only fires when the call somehow bypasses Pydantic (e.g. a future internal direct-dispatch caller).
-- **Session IDs**: format is `<project-slug>@<4hex>` (e.g. `godot-ai@a3f2`). The slug is derived from the project directory name so agents can recognize which editor they're targeting; the hex suffix disambiguates same-project twins. Server treats the ID as an opaque key.
+- **`batch_execute` uses plugin command names, not MCP tool names**: The MCP tool `node_create` dispatches the plugin command `create_node`. Inside `batch_execute`'s `commands[].command` field, use the plugin name (`create_node`), not the MCP name (`node_create`). Inside a `<domain>_manage` op, the same rule applies — `node_manage(op="delete", params={...})` delegates to the plugin's `delete_node`, not `node_delete`. The Python handlers in `src/runtime_studio/handlers/` are the authoritative map — each handler calls `runtime.send_command("<plugin_cmd>", ...)`. When `batch_execute` receives an unknown plugin command, the GDScript dispatcher returns `INVALID_PARAMS` with fuzzy `data.suggestions`. Inside a `<domain>_manage` rollup, op-name validation happens earlier — at the FastMCP/Pydantic schema boundary, since `op` is typed `Literal[...]` of the registered op names. A misspelling like `theme_manage(op="set_colour")` surfaces as a Pydantic `literal_error` whose message lists the valid alternatives ("Input should be 'create', 'set_color', …"), not a structured `data.suggestions` payload. The meta-tool's own `difflib`-based fallback in `dispatch_manage_op` only fires when the call somehow bypasses Pydantic (e.g. a future internal direct-dispatch caller).
+- **Session IDs**: format is `<project-slug>@<4hex>` (e.g. `runtime-studio-godot@a3f2`). The slug is derived from the project directory name so agents can recognize which editor they're targeting; the hex suffix disambiguates same-project twins. Server treats the ID as an opaque key.
 - **Per-call session routing**: every Godot-talking tool accepts an optional `session_id` parameter. Empty (the default) resolves to the global active session. When supplied, that single call targets that session — `require_writable` and every handler inside the call see the pinned session, not the active one. Use this when multiple AI clients share one MCP server. For `<domain>_manage` rollups, `session_id` is a sibling of `op` and `params` (top-level), *not* nested inside `params`. Resources (`godot://...`) still resolve via the active session.
-- **FastMCP middleware order is load-bearing**: `src/godot_ai/server.py` registers, in this order, `PreserveGodotCommandErrorData → StripClientWrapperKwargs → ParseStringifiedParams → HintOpTypoOnManage`. FastMCP composes the chain via `reversed(self.middleware)`, so first-added is **outermost** (sees response last) and last-added is **innermost** (sees response first). The four positions are reasoned out in the docstring above the `mcp.add_middleware(...)` calls in `server.py`; the order is locked by `tests/unit/test_server_middleware_order.py`. Adding new middleware: read that docstring, decide the position, update both the docstring and the test in lockstep.
-- **Telemetry is wrap-once at server build time**: `src/godot_ai/server.py` calls `install_fastmcp_wraps(mcp)` right after constructing the FastMCP instance and before any `register_<domain>_tools(mcp)`. That call replaces `mcp.tool` / `mcp.resource` with auto-instrumenting versions, so every tool and resource (including the `<domain>_manage` rollups, whose `op` arg is captured as `sub_action`) gets one `tool_execution` / `resource_retrieval` record per call automatically. Adding a new tool, resource, or rollup op needs **no telemetry call**. Opt-out is `GODOT_AI_DISABLE_TELEMETRY=true` (also accepts `DISABLE_TELEMETRY=true`). The endpoint is configured via `GODOT_AI_TELEMETRY_ENDPOINT`; if unset, the collector runs and persists `customer_uuid` but never sends. Session-id slugs are sha256-hashed before leaving the process so project directory names don't leak. Plugin-side events (dock startup, self-update outcome) ride the existing `send_event("plugin_event", …)` channel; the names allowlist lives in both `plugin/addons/godot_ai/telemetry.gd` and `src/godot_ai/transport/websocket.py::_PLUGIN_EVENT_NAMES` — keep them in sync. Full reference: `docs/TELEMETRY.md`.
+- **FastMCP middleware order is load-bearing**: `src/runtime_studio/server.py` registers, in this order, `PreserveGodotCommandErrorData → StripClientWrapperKwargs → ParseStringifiedParams → HintOpTypoOnManage`. FastMCP composes the chain via `reversed(self.middleware)`, so first-added is **outermost** (sees response last) and last-added is **innermost** (sees response first). The four positions are reasoned out in the docstring above the `mcp.add_middleware(...)` calls in `server.py`; the order is locked by `tests/unit/test_server_middleware_order.py`. Adding new middleware: read that docstring, decide the position, update both the docstring and the test in lockstep.
+- **Telemetry is wrap-once at server build time**: `src/runtime_studio/server.py` calls `install_fastmcp_wraps(mcp)` right after constructing the FastMCP instance and before any `register_<domain>_tools(mcp)`. That call replaces `mcp.tool` / `mcp.resource` with auto-instrumenting versions, so every tool and resource (including the `<domain>_manage` rollups, whose `op` arg is captured as `sub_action`) gets one `tool_execution` / `resource_retrieval` record per call automatically. Adding a new tool, resource, or rollup op needs **no telemetry call**. Opt-out is `RUNTIME_STUDIO_DISABLE_TELEMETRY=true` (also accepts `DISABLE_TELEMETRY=true`). The endpoint is configured via `RUNTIME_STUDIO_TELEMETRY_ENDPOINT`; if unset, the collector runs and persists `customer_uuid` but never sends. Session-id slugs are sha256-hashed before leaving the process so project directory names don't leak. Plugin-side events (dock startup, self-update outcome) ride the existing `send_event("plugin_event", …)` channel; the names allowlist lives in both `plugin/addons/runtime_studio/telemetry.gd` and `src/runtime_studio/transport/websocket.py::_PLUGIN_EVENT_NAMES` — keep them in sync. Full reference: `docs/TELEMETRY.md`.
 
 ### Published `class_name` compatibility
 
@@ -41,7 +41,7 @@ Treat a shipped `class_name` as compatibility surface for self-update. v2.4.0 ->
 
 If a `class_name` needs to become a shim, keep the original file path and declaration:
 
-- Inheritance-shaped classes can usually `extends "res://addons/godot_ai/.../impl_file.gd"`.
+- Inheritance-shaped classes can usually `extends "res://addons/runtime_studio/.../impl_file.gd"`.
 - Static-constants/static-method classes need explicit forwarding or duplicated constants; `extends` does not surface static members through class-name lookup.
 - Mixed classes should either keep the implementation in the original file or hand-write a shim that preserves every published static and instance shape.
 
@@ -53,18 +53,18 @@ Claude Code sessions often run in git worktrees (`.claude/worktrees/<name>/`). B
 
 - **File paths**: Your working directory is the worktree, not the repo root. Files you create live in that worktree.
 - **Godot editor**: The editor runs against a specific worktree's `test_project/`. The plugin is symlinked from that worktree's `plugin/` directory. Check `session_list` — the `project_path` field tells you which worktree the editor is using.
-- **Dev server**: The plugin-managed server (auto-spawned on editor start, no `--reload`) uses the root repo's `.venv` and `src/`. Python code changes in a worktree won't take effect there unless the root repo also has them. Two ways to serve the worktree's own Python source: (a) click **Start Dev Server** in the dock — it walks up from `res://` to find a sibling `src/godot_ai/` and auto-sets `PYTHONPATH` to that tree's `src/` before spawning `--reload`; (b) run `script/serve-this-worktree` from a terminal for the same effect outside the editor.
+- **Dev server**: The plugin-managed server (auto-spawned on editor start, no `--reload`) uses the root repo's `.venv` and `src/`. Python code changes in a worktree won't take effect there unless the root repo also has them. Two ways to serve the worktree's own Python source: (a) click **Start Dev Server** in the dock — it walks up from `res://` to find a sibling `src/runtime_studio/` and auto-sets `PYTHONPATH` to that tree's `src/` before spawning `--reload`; (b) run `script/serve-this-worktree` from a terminal for the same effect outside the editor.
 - **Passing info between sessions**: When writing prompts, handoff notes, or file references intended for another session, **always include the full worktree path** or specify the worktree name. Relative paths like `docs/friction-log.md` are ambiguous — a different session may be in a different worktree or on `main`. Use the absolute path.
 - **Merging**: Worktree branches must be merged to `main` and pulled into other worktrees for changes to propagate. The plugin symlink means GDScript changes propagate within the same worktree immediately, but not across worktrees.
 
 ### Worktree health: `script/verify-worktree` + `post-checkout` hook
 
-`test_project/addons/godot_ai` is **not tracked in git** (see `.gitignore` and #185). Every working copy builds the link locally — as a symlink on Unix, as a directory junction on Windows. This avoids the Windows-without-Dev-Mode text-file-fallback trap and stops `git rebase` / `cherry-pick` from fighting the link on every checkout.
+`test_project/addons/runtime_studio` is **not tracked in git** (see `.gitignore` and #185). Every working copy builds the link locally — as a symlink on Unix, as a directory junction on Windows. This avoids the Windows-without-Dev-Mode text-file-fallback trap and stops `git rebase` / `cherry-pick` from fighting the link on every checkout.
 
 Before editing *anything* in `plugin/` in a worktree, the worktree must pass two invariants:
 
-1. `plugin/addons/godot_ai/plugin.gd` exists (the worktree's `plugin/` is populated, not empty or sparse).
-2. `test_project/addons/godot_ai` is a real symlink (or Windows directory junction) into **this worktree's** `plugin/addons/godot_ai`.
+1. `plugin/addons/runtime_studio/plugin.gd` exists (the worktree's `plugin/` is populated, not empty or sparse).
+2. `test_project/addons/runtime_studio` is a real symlink (or Windows directory junction) into **this worktree's** `plugin/addons/runtime_studio`.
 
 `script/verify-worktree` (bash, works in git-bash on Windows) checks both. If the link is missing or broken it creates/repairs it via `ln -s` or `mklink /J` — no admin rights, no Windows Developer Mode required. It runs automatically via a `post-checkout` hook on every `git worktree add` and `git checkout <branch>`, so a freshly-created worktree is healthy by the time you start editing.
 
@@ -72,7 +72,7 @@ Wiring: `script/setup-dev` and `script/setup-dev.ps1` copy `script/githooks/post
 
 **If you find a broken worktree** (empty `plugin/`, or the link missing/stale): do NOT `git add` anything. Run `script/verify-worktree` to heal, or re-create the worktree. Committing plugin/ edits from a broken worktree stages phantom deletions that overwrite the canonical plugin code in main on push.
 
-**Parallel plugin development IS supported** — each worktree has its own `plugin/` (standard git worktree semantics) and its own locally-built `test_project/addons/godot_ai` link. Multiple Godot editors, one per worktree, all connect to the same MCP server on :8000; use `session_activate` (or `session_id` per call) to route. The ban is only on editing in *broken* worktrees.
+**Parallel plugin development IS supported** — each worktree has its own `plugin/` (standard git worktree semantics) and its own locally-built `test_project/addons/runtime_studio` link. Multiple Godot editors, one per worktree, all connect to the same MCP server on :8000; use `session_activate` (or `session_id` per call) to route. The ban is only on editing in *broken* worktrees.
 
 ### Godot editor + worktree safety
 
@@ -80,7 +80,7 @@ Wiring: `script/setup-dev` and `script/setup-dev.ps1` copy `script/githooks/post
 
 ```bash
 # SAFE — root repo, never auto-cleaned:
-/Applications/Godot_mono.app/Contents/MacOS/Godot --editor --path ~/godot-ai/test_project/
+/Applications/Godot_mono.app/Contents/MacOS/Godot --editor --path ~/runtime-studio-godot/test_project/
 
 # SAFE — this session's own worktree (commit frequently):
 /Applications/Godot_mono.app/Contents/MacOS/Godot --editor --path .claude/worktrees/<this-session>/test_project/
@@ -116,7 +116,7 @@ Sometimes you're directed at another session's PR worktree (e.g. to fix a bug th
 ## Dev workflow
 
 ```bash
-cd ~/godot-ai
+cd ~/runtime-studio-godot
 script/setup-dev             # creates .venv, installs deps, applies macOS .pth fix
 source .venv/bin/activate
 pytest -v                    # run tests
@@ -126,30 +126,30 @@ ruff format src/ tests/      # format
 
 **macOS + Python 3.13 note**: Files inside `.venv` inherit the macOS hidden flag (dot-prefix directory). Python 3.13 skips hidden `.pth` files (CPython gh-113659), breaking editable installs. `script/setup-dev` generates a `sitecustomize.py` in the venv that adds `src/` to `sys.path` via normal import (unaffected by hidden flags). No manual `chflags` needed.
 
-**Windows note**: use `.\script\setup-dev.ps1` instead of `script/setup-dev`. The Windows script creates `test_project\addons\godot_ai` as a directory junction — no admin rights and no Windows Developer Mode required. If you ever need to recreate the link by hand (e.g. outside setup-dev), either form works:
+**Windows note**: use `.\script\setup-dev.ps1` instead of `script/setup-dev`. The Windows script creates `test_project\addons\runtime_studio` as a directory junction — no admin rights and no Windows Developer Mode required. If you ever need to recreate the link by hand (e.g. outside setup-dev), either form works:
 
 ```powershell
 # from repo root or worktree root
-Remove-Item -LiteralPath test_project\addons\godot_ai -Force -ErrorAction SilentlyContinue
-New-Item -ItemType Junction -Path test_project\addons\godot_ai -Target ..\..\plugin\addons\godot_ai
+Remove-Item -LiteralPath test_project\addons\runtime_studio -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Junction -Path test_project\addons\runtime_studio -Target ..\..\plugin\addons\runtime_studio
 ```
 
-Or in cmd: `mklink /J test_project\addons\godot_ai ..\..\plugin\addons\godot_ai`.
+Or in cmd: `mklink /J test_project\addons\runtime_studio ..\..\plugin\addons\runtime_studio`.
 
 **When troubleshooting any dev-environment / setup / dependency / symlink issue, scan `script/` first** for an existing fixer before doing it by hand. The project ships scripts for a reason — bypassing them re-introduces the bugs they were written to handle.
 
 ### Server lifecycle in dev
 
 The plugin manages the server process:
-- On startup, plugin checks if port 8000 is already in use. If yes, uses existing server. If no, spawns `.venv/bin/python -m godot_ai --transport streamable-http --port 8000`.
-- The plugin prefers the local `.venv` over system-installed `godot-ai` so dev checkouts always use source code.
-- In `--headless` / headless-display launches, the plugin returns early and does not start/adopt the server, open a WebSocket, add the dock, attach loggers, register the debugger plugin, instantiate handlers, or write the game-helper autoload. Set `GODOT_AI_ALLOW_HEADLESS=1` only for intentional headless MCP sessions such as CI handler tests.
+- On startup, plugin checks if port 8000 is already in use. If yes, uses existing server. If no, spawns `.venv/bin/python -m runtime_studio --transport streamable-http --port 8000`.
+- The plugin prefers the local `.venv` over system-installed `runtime-studio-godot` so dev checkouts always use source code.
+- In `--headless` / headless-display launches, the plugin returns early and does not start/adopt the server, open a WebSocket, add the dock, attach loggers, register the debugger plugin, instantiate handlers, or write the game-helper autoload. Set `RUNTIME_STUDIO_ALLOW_HEADLESS=1` only for intentional headless MCP sessions such as CI handler tests.
 
 For Python auto-reload during dev (no need to touch Godot):
 ```bash
-python -m godot_ai --transport streamable-http --port 8000 --reload
+python -m runtime_studio --transport streamable-http --port 8000 --reload
 ```
-This uses `src/godot_ai/asgi.py` to run uvicorn with its factory reload path. Uvicorn watches `src/` for changes and restarts the server process automatically. The plugin auto-reconnects.
+This uses `src/runtime_studio/asgi.py` to run uvicorn with its factory reload path. Uvicorn watches `src/` for changes and restarts the server process automatically. The plugin auto-reconnects.
 
 ### Plugin reload
 
@@ -163,23 +163,23 @@ Use the GitHub Actions workflow to cut a release:
 ```bash
 gh workflow run bump-and-release.yml -f bump=patch   # or minor / major
 ```
-This bumps `plugin.cfg` + `pyproject.toml`, commits, tags, and pushes. The `release.yml` workflow triggers on the tag and builds a `godot-ai-plugin.zip` attached to the GitHub Release.
+This bumps `plugin.cfg` + `pyproject.toml`, commits, tags, and pushes. The `release.yml` workflow triggers on the tag and builds a `runtime-studio-godot-plugin.zip` attached to the GitHub Release.
 
 ### Self-update
 
-The dock checks the GitHub releases API on startup. If a newer version exists, a yellow banner appears with an "Update" button that downloads the release ZIP, hands off to `update_reload_runner.gd`, disables the old plugin, extracts over the current `addons/godot_ai/`, waits for Godot's filesystem scan, and enables a fresh plugin instance. There must be no manual editor restart and no programmatic `OS.create_process` + `quit` restart in this path.
+The dock checks the GitHub releases API on startup. If a newer version exists, a yellow banner appears with an "Update" button that downloads the release ZIP, hands off to `update_reload_runner.gd`, disables the old plugin, extracts over the current `addons/runtime_studio/`, waits for Godot's filesystem scan, and enables a fresh plugin instance. There must be no manual editor restart and no programmatic `OS.create_process` + `quit` restart in this path.
 
 The server process is intentionally prepared for reload, not left untouched: `prepare_for_update_reload()` stops the managed server and resets the spawn guard so the re-enabled plugin starts or adopts the correct server for the new plugin version.
 
 In dev checkouts the check is skipped: `is_dev_checkout()` detects a nearby `.venv` and short-circuits to avoid offering a path that would overwrite tracked source (the addons dir is a symlink into `plugin/`). Three override knobs let you exercise the update flow without leaving the repo (resolved in priority order):
 
-1. **Dock dropdown** (`Mode override` in the dev-section of the MCP dock) — visible when `Developer mode` is on. Persists via EditorSetting `godot_ai/mode_override`. Choices: `Auto` / `Force user` / `Force dev`. Changing the dropdown immediately re-runs the update check so you can flip to "Force user" and watch the yellow banner appear in the same frame.
-2. **`GODOT_AI_MODE` env var** — fallback for CLI launches and CI. Values: `user` / `dev`. Only takes effect when the dock dropdown is `Auto` (the UI selection always wins).
+1. **Dock dropdown** (`Mode override` in the dev-section of the MCP dock) — visible when `Developer mode` is on. Persists via EditorSetting `runtime_studio/mode_override`. Choices: `Auto` / `Force user` / `Force dev`. Changing the dropdown immediately re-runs the update check so you can flip to "Force user" and watch the yellow banner appear in the same frame.
+2. **`RUNTIME_STUDIO_MODE` env var** — fallback for CLI launches and CI. Values: `user` / `dev`. Only takes effect when the dock dropdown is `Auto` (the UI selection always wins).
 3. Neither set → the `.venv`-proximity heuristic runs as before.
 
 When either override reports `user`, the yellow update banner's label includes `(forced)` so testers don't forget they're in override mode.
 
-`_install_update` keeps a physical data-safety guard (`addons_dir_is_symlink()`) independent of the mode override: even in forced-user mode the self-install bails if `res://addons/godot_ai` is a symlink. To actually test the end-to-end extract path, unpack a release zip over a plain-directory copy of the addons dir (or test from a standalone project outside the dev tree).
+`_install_update` keeps a physical data-safety guard (`addons_dir_is_symlink()`) independent of the mode override: even in forced-user mode the self-install bails if `res://addons/runtime_studio` is a symlink. To actually test the end-to-end extract path, unpack a release zip over a plain-directory copy of the addons dir (or test from a standalone project outside the dev tree).
 
 For self-update changes, run the local interactive smoke harness:
 
@@ -209,7 +209,7 @@ Agent trigger: this smoke is required whenever a change touches any of these are
 - server reload prep around `prepare_for_update_reload()`
 - release ZIP layout or install/extract behavior
 
-The harness creates a disposable project with a physical addon copy, stages a synthetic v(N+1) ZIP that adds a new typed Dict/Array field read from `_exit_tree`, forces the Update banner to use that local ZIP, records the macOS DiagnosticReports baseline, and launches Godot. The only operator action is to click Update in the dock. Passing means the editor stays alive without restart, the plugin version advances, `user://godot_ai_update/` is consumed, no new Godot `.ips` appears, and the vNext `_exit_tree` trigger does not print during the update window.
+The harness creates a disposable project with a physical addon copy, stages a synthetic v(N+1) ZIP that adds a new typed Dict/Array field read from `_exit_tree`, forces the Update banner to use that local ZIP, records the macOS DiagnosticReports baseline, and launches Godot. The only operator action is to click Update in the dock. Passing means the editor stays alive without restart, the plugin version advances, `user://runtime_studio_update/` is consumed, no new Godot `.ips` appears, and the vNext `_exit_tree` trigger does not print during the update window.
 
 ## Testing
 
@@ -254,7 +254,7 @@ A test that passes for the wrong reason is worse than a missing test: it ships a
 4. Use `/mcp` in Claude Code to connect
 
 **Worktree gotcha**: each working tree (main checkout or git worktree) has its own
-`test_project/addons/godot_ai` symlink pointing to *that tree's* `plugin/`. If you
+`test_project/addons/runtime_studio` symlink pointing to *that tree's* `plugin/`. If you
 edit a worktree's plugin but Godot is running on the main repo's `test_project/`,
 your changes won't appear there. Use `script/open-godot-here` to launch Godot on the
 current working tree's `test_project/`.
@@ -279,7 +279,7 @@ current working tree's `test_project/`.
 ## Client configuration
 
 The plugin auto-configures 19+ MCP clients via a registry + strategy system in
-`plugin/addons/godot_ai/clients/`:
+`plugin/addons/runtime_studio/clients/`:
 
 - `_base.gd` — `McpClient` descriptor (data only: id, display_name, config_type,
   path_template, server_key_path, entry_url_field, entry_extra_fields,
@@ -333,7 +333,7 @@ when auto-configure can't find a CLI.
 6. Update the tool-surface blurb in `server.py` `instructions=` if the new verb is named (rollups are listed by tool, not by op).
 7. For write tools: add `require_writable(runtime)` call at the top of the Python handler.
 8. Write a description with natural-language keywords a user would search for (e.g. `screenshot`, `keybinding`, `asset`) alongside the Godot term. For ops inside a rollup, edit the `_DESCRIPTION` block of the domain's tool file so the rolled-up tool's docstring stays exhaustive.
-9. **Consider a resource form**: pure reads with no `session_id` filtering benefit from a matching `godot://...` resource (or template) in `src/godot_ai/resources/`. The tool form remains for `session_id`-pinned reads; clients that surface resources prefer the URI. When you add a resource form, append `Resource form: godot://...` to the tool's description so aware clients can route reads through the URI.
+9. **Consider a resource form**: pure reads with no `session_id` filtering benefit from a matching `godot://...` resource (or template) in `src/runtime_studio/resources/`. The tool form remains for `session_id`-pinned reads; clients that surface resources prefer the URI. When you add a resource form, append `Resource form: godot://...` to the tool's description so aware clients can route reads through the URI.
 10. Add tests: handler unit test, Python integration test, AND GDScript test in `test_project/tests/`. Migrate any integration tests for an existing verb when you move it under a rollup — the form changes from `client.call_tool("domain_verb", {...})` to `client.call_tool("domain_manage", {"op": "verb", "params": {...}, "session_id": ...})`.
 
 ## Deferred responses (tools whose reply flows out-of-band)
@@ -348,7 +348,7 @@ This is the only pattern in the plugin that decouples response from handler-retu
 
 ## Game-side code: gate on `Engine.is_editor_hint()`, not `OS.has_feature("editor")`
 
-Code shipped as an autoload (e.g. `plugin/addons/godot_ai/runtime/game_helper.gd`) that's intended to run only in the game subprocess must guard on `Engine.is_editor_hint()`. `OS.has_feature("editor")` is a compile-time `TOOLS_ENABLED` check — it returns true in the game subprocess too, because play-in-editor spawns the game with the same editor binary. `is_editor_hint()` is the runtime-context check.
+Code shipped as an autoload (e.g. `plugin/addons/runtime_studio/runtime/game_helper.gd`) that's intended to run only in the game subprocess must guard on `Engine.is_editor_hint()`. `OS.has_feature("editor")` is a compile-time `TOOLS_ENABLED` check — it returns true in the game subprocess too, because play-in-editor spawns the game with the same editor binary. `is_editor_hint()` is the runtime-context check.
 
 Corollary for the plugin side: when registering a game-side autoload via `add_autoload_singleton`, also call `ProjectSettings.save()` explicitly. `EditorPlugin.add_autoload_singleton` only mutates in-memory settings — the subprocess reads project.godot from disk, so without an explicit save the autoload is missing in the child process. See `plugin.gd::_ensure_game_helper_autoload`.
 

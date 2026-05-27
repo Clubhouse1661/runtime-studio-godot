@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const CameraHandler := preload("res://addons/godot_ai/handlers/camera_handler.gd")
+const CameraHandler := preload("res://addons/runtime_studio/handlers/camera_handler.gd")
 
 ## Tests for CameraHandler — Camera2D/Camera3D authoring, configure,
 ## limits, damping, follow, presets.
@@ -910,7 +910,7 @@ func test_configure_current_undo_mcp_reads_are_deterministic() -> void:
 # Logical-current state must live on the handler, NOT as Node metadata
 # on the scene root, because set_meta() persists into .tscn on save.
 # Regression guard: walk the scene root's metadata after a make_current
-# round-trip and assert no godot_ai/* keys leaked there.
+# round-trip and assert no runtime_studio/* keys leaked there.
 func test_logical_current_does_not_pollute_scene_root_metadata() -> void:
 	var first := _create("MetaProbeFirst", "2d", true)
 	if first.is_empty():
@@ -925,7 +925,7 @@ func test_logical_current_does_not_pollute_scene_root_metadata() -> void:
 
 	var scene_root := EditorInterface.get_edited_scene_root()
 	for meta_key in scene_root.get_meta_list():
-		assert_false(String(meta_key).begins_with("godot_ai/"),
+		assert_false(String(meta_key).begins_with("runtime_studio/"),
 			"Scene root metadata polluted with MCP key '%s' — would persist into .tscn on save"
 				% [meta_key])
 

@@ -202,7 +202,7 @@ def _print_autoload_section(url: str, sid: str) -> dict:
 
     if not in_memory and not on_disk:
         print(
-            "\n  HINT: _mcp_game_helper is missing. Disable + re-enable the Godot AI\n"
+            "\n  HINT: _mcp_game_helper is missing. Disable + re-enable the Runtime Studio for Godot\n"
             "  plugin in Project Settings → Plugins to recreate it."
         )
     elif in_memory and not on_disk:

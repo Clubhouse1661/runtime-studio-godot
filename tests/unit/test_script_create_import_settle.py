@@ -19,7 +19,7 @@ from pathlib import Path
 
 from tests.unit._gdscript_text import get_func_block
 
-PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio"
 SCRIPT_HANDLER = PLUGIN_ROOT / "handlers" / "script_handler.gd"
 PLUGIN_GD = PLUGIN_ROOT / "plugin.gd"
 

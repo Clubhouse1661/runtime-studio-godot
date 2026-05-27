@@ -1,8 +1,8 @@
-# Godot AI — Working Plan
+# Runtime Studio for Godot — Working Plan
 
 *Updated 2026-05-06 (audit-v1 PRs #298–#315 + audit-v2 PRs #369–#390 landed on `beta`. Audit-v1: scene-path ancestry guard, update/config data-loss safeguards, lifecycle reliability, characterization tests, plugin.gd extraction, state-model cleanup, UpdateManager extraction, Runtime Protocol deletion, narrowed meta-tool JSON coercion, self-update preload-alias hardening, locked FastMCP middleware order. Audit-v2: origin allowlist (DNS-rebinding guard), path-traversal guards on `script_*` / `filesystem_*` writes, errno.EADDRINUSE portability, `SessionRegistry` RLock removal, Pydantic-validated WS event payloads, sole-survivor auto-failover, 30s filesystem_changed watchdog during update reload, FAILED_MIXED self-update visibility via `mixed_state`, 32/tick packet-drain cap, error-code vocabulary enrichment (NODE_NOT_FOUND / PROPERTY_NOT_ON_CLASS / VALUE_OUT_OF_RANGE / MISSING_REQUIRED_PARAM cut INVALID_PARAMS sites 471 → 97), resolve-or-error helper extraction, resource-form lint for meta-tool reads, LogViewer + PortPickerPanel extraction from `mcp_dock.gd`. Smoke pass on `72b35d7`: 47 GDScript suites + 903 Python tests green.)*
 
-This is the current working plan for Godot AI. It focuses on active and upcoming work only.
+This is the current working plan for Runtime Studio for Godot. It focuses on active and upcoming work only.
 
 Adjacent reference docs:
 
@@ -64,7 +64,7 @@ Adjacent reference docs:
 - [x] clear session selection semantics in tools and UI — `session_activate` accepts substring hints (project folder name / path / session_id) in addition to exact UUID, with ambiguous-match and no-match paths that list candidates
 - [x] enough session metadata to distinguish multiple editors safely — added `name` (project basename), `editor_pid`, and `last_seen` heartbeat to every session; surfaced in `session_list`
 - [x] per-call session targeting — every Godot-talking tool accepts an optional `session_id`; bound at the `DirectRuntime` layer so `require_writable` and handlers see the pinned session. Lets two AI clients share one server without stomping each other's active.
-- [x] human-readable session IDs — `<project-slug>@<4hex>` (e.g. `godot-ai@a3f2`) instead of 32-char random hex. Agents can recognize/remember the target without calling `session_list` first.
+- [x] human-readable session IDs — `<project-slug>@<4hex>` (e.g. `runtime-studio-godot@a3f2`) instead of 32-char random hex. Agents can recognize/remember the target without calling `session_list` first.
 
 **Why this matters:** Real use will quickly involve multiple projects, multiple editor windows, or multiple test sessions. The session model needs to stop being “good enough for one editor.”
 
@@ -84,9 +84,9 @@ Adjacent reference docs:
 See [Packaging & Distribution](packaging-distribution.md) for full detail. The short version:
 
 - [x] clean install docs for Claude Code, Claude Desktop, Codex, and Antigravity (README + dock auto-configure with manual fallback for 19 clients including Cursor, Cline, Roo Code, Kilo, OpenCode, Zed, Windsurf, VS Code/Insiders, Trae, Kiro, Gemini CLI, Cherry Studio, Qwen Code, Kimi Code)
-- [x] PyPI / `uvx` path works reliably — automated via `bump-and-release.yml`; live on PyPI as `godot-ai`; `uvx --from godot-ai~=VERSION godot-ai` is the canonical user-install command. Stdio-only clients (Claude Desktop, Zed) bridge through `uvx mcp-proxy`. Stale-index retries (`--refresh`) and cache priming on self-update prevent flaky first-run failures.
+- [x] PyPI / `uvx` path works reliably — automated via `bump-and-release.yml`; live on PyPI as `runtime-studio-godot`; `uvx --from runtime-studio-godot~=VERSION runtime-studio-godot` is the canonical user-install command. Stdio-only clients (Claude Desktop, Zed) bridge through `uvx mcp-proxy`. Stale-index retries (`--refresh`) and cache priming on self-update prevent flaky first-run failures.
 - [ ] desktop binary path is real, not aspirational
-- [x] plugin is downloadable from the Godot AssetLib — live as [asset/5050](https://godotengine.org/asset-library/asset/5050) and on the new [Godot Asset Store](https://store.godotengine.org/asset/dlight/godot-ai/); release ZIP workflow ships `godot-ai-plugin.zip` via GitHub Releases; dock self-update banner offers one-click upgrades that survive without an editor restart (`update_reload_runner.gd` handoff). Local self-update smoke (`script/local-self-update-smoke`) is the regression gate.
+- [x] plugin is downloadable from the Godot AssetLib — live as [asset/5050](https://godotengine.org/asset-library/asset/5050) and on the new [Godot Asset Store](https://store.godotengine.org/asset/dlight/runtime-studio-godot/); release ZIP workflow ships `runtime-studio-godot-plugin.zip` via GitHub Releases; dock self-update banner offers one-click upgrades that survive without an editor restart (`update_reload_runner.gd` handoff). Local self-update smoke (`script/local-self-update-smoke`) is the regression gate.
 - [x] CI covers Python tests, Godot-side tests, and release-smoke install paths (3 OS × 2 Python + 3 OS Godot + release-smoke). Linux CI uses `chickensoft-games/setup-godot` on `ubuntu-latest`. GDScript parse validation (`ci-check-gdscript`) runs before tests. Step timeouts prevent hangs.
 - [x] bump-and-release workflow — `gh workflow run bump-and-release.yml -f bump=patch/minor/major` bumps versions, commits, tags, and triggers release build
 - [ ] compatibility guidance is published and maintained
@@ -106,7 +106,7 @@ Two pressures shape the published tool surface: tool-search-aware clients want d
 - [x] document which tools should stay non-deferred (the 4 always-loaded core: `editor_state`, `scene_get_hierarchy`, `node_get_properties`, `session_activate`) and mark the rest `defer_loading: true` in the server's MCP advertisement where the protocol permits
 - [x] add a short "available tool categories" blurb to the server's MCP server instructions so clients using tool search have a map of what to search for
 - [x] verify the published surface still works for clients that do not use tool search (no tool should require a specific discovery path)
-- [x] **Collapse 118 MCP tools to ~39 via `<domain>_manage` rollups (PR #203):** each domain exposes one rolled-up tool that takes `op="<verb>"` + a `params` dict, alongside the highest-traffic verbs that stay as named tools. Schema-aware clients still see every op via the dynamic `Literal[...]` enum built by `register_manage_tool` in `src/godot_ai/tools/_meta_tool.py`. Total surface: 4 core + ~15 named verbs + ~20 rollups = ~39 tools.
+- [x] **Collapse 118 MCP tools to ~39 via `<domain>_manage` rollups (PR #203):** each domain exposes one rolled-up tool that takes `op="<verb>"` + a `params` dict, alongside the highest-traffic verbs that stay as named tools. Schema-aware clients still see every op via the dynamic `Literal[...]` enum built by `register_manage_tool` in `src/runtime_studio/tools/_meta_tool.py`. Total surface: 4 core + ~15 named verbs + ~20 rollups = ~39 tools.
 - [x] **Per-deploy tool exclusion (PR #170/#177):** `--exclude-domains audio,particle,...` CLI flag and `EditorSettings`-backed dock UI drop entire domains for tool-capped clients while keeping the core 4 alive. `tool_catalog.gd` mirrors `domains.py` so the dock can render checkboxes without round-tripping to a running server; CI keeps them in sync via `tests/unit/test_tool_domains.py`.
 - [x] **Resource-form reads (`godot://...`):** read-only URIs mirror the cheap reads (`godot://node/{path}/properties`, `godot://script/{path}`, `godot://materials`, etc.) so they don't count against the tool cap. Tool form remains for `session_id`-pinned reads.
 
@@ -294,21 +294,21 @@ Requires the remaining Tier 1 gaps (`camera.*`, `audio.*`) plus Tier 3 shipping 
 - **v3 — Real art drops in.**
   - Pixel-art sprites, 9-slice UI buttons, custom fonts, SFX / music are binary files the AI cannot author directly. Three sourcing paths, priority order:
     1. **CC0 asset packs** (Kenney, itch.io). AI suggests a pack, user drops the folder into `res://assets/`, AI calls `filesystem_reimport` and wires references. No new tooling in this repo.
-    2. **External image-gen MCP server** composed alongside `godot-ai`. Any image-gen MCP with a file-write tool can produce a PNG on disk inside the project, then `filesystem_reimport` picks it up. No new tooling in this repo.
+    2. **External image-gen MCP server** composed alongside `runtime-studio-godot`. Any image-gen MCP with a file-write tool can produce a PNG on disk inside the project, then `filesystem_reimport` picks it up. No new tooling in this repo.
     3. **SVG icon set** via `theme_set_icon` (tracked above, pending). SVG is text, so `filesystem_write_text` can author simple geometric icons directly.
 
 #### Do we need a separate `texture_*` / image-gen tool here?
 
 **Default answer: no.** The reasoning:
 
-- **Image generation is out of scope for an editor-integration server.** Bundling model-calling logic into `godot-ai` drags in API keys, credit accounting, and model-vendor choice. The `filesystem_reimport` tool already exists so an external image-gen MCP can drop a PNG on disk and have Godot pick it up.
+- **Image generation is out of scope for an editor-integration server.** Bundling model-calling logic into `runtime-studio-godot` drags in API keys, credit accounting, and model-vendor choice. The `filesystem_reimport` tool already exists so an external image-gen MCP can drop a PNG on disk and have Godot pick it up.
 - **"Texture adjust" is a shader concern, not an asset concern.** `CanvasItemMaterial` / `ShaderMaterial` / `modulate` / `self_modulate` are all reachable today.
 - **Weak case for one helper — `resource_create_procedural_texture`:** a thin wrapper that creates `NoiseTexture2D` / `GradientTexture2D` / `PlaceholderTexture2D` with sensible defaults and saves to a `res://` path. These are the three most common v2 needs and today require multi-step `resource_create` + property-set sequences. Deferred — build it only if a real v2 attempt shows the multi-step version is painful.
 - **Revisit trigger:** if v3 sourcing via external image-gen MCP proves unreliable in practice (latency, quality, auth friction), revisit whether a bundled `texture_gen` tool belongs here. Don't speculatively build it.
 
 ### Benchmark Exit Criteria
 
-- [ ] Godot AI can author the project structure, gameplay scenes, and data assets with limited manual cleanup
+- [ ] Runtime Studio for Godot can author the project structure, gameplay scenes, and data assets with limited manual cleanup
 - [ ] the AI can launch the game, inspect results, and tighten feel over repeated iterations
 - [ ] a human reviewer would call the slice readable and juicy, not just functional
 - [ ] the prototype can be exported to a desktop build without bespoke handholding

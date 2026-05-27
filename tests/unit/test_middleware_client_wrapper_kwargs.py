@@ -7,7 +7,7 @@ from typing import Any
 
 from mcp.types import CallToolRequestParams
 
-from godot_ai.middleware import CLIENT_WRAPPER_KWARGS, StripClientWrapperKwargs
+from runtime_studio.middleware import CLIENT_WRAPPER_KWARGS, StripClientWrapperKwargs
 
 
 @dataclass

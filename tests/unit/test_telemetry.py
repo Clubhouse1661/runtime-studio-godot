@@ -1,4 +1,4 @@
-"""Unit tests for ``godot_ai.telemetry``.
+"""Unit tests for ``runtime_studio.telemetry``.
 
 Covers:
 * ``TelemetryConfig`` opt-out + endpoint validation
@@ -17,7 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from godot_ai import telemetry as tel
+from runtime_studio import telemetry as tel
 
 ## ``isolated_data_dir`` comes from ``tests/unit/conftest.py``.
 
@@ -25,11 +25,11 @@ from godot_ai import telemetry as tel
 @pytest.fixture
 def clean_env(monkeypatch) -> None:
     for name in (
-        "GODOT_AI_DISABLE_TELEMETRY",
+        "RUNTIME_STUDIO_DISABLE_TELEMETRY",
         "DISABLE_TELEMETRY",
-        "GODOT_AI_TELEMETRY_ENDPOINT",
-        "GODOT_AI_TELEMETRY_TIMEOUT",
-        "GODOT_AI_TELEMETRY_ALLOW_LOOPBACK",
+        "RUNTIME_STUDIO_TELEMETRY_ENDPOINT",
+        "RUNTIME_STUDIO_TELEMETRY_TIMEOUT",
+        "RUNTIME_STUDIO_TELEMETRY_ALLOW_LOOPBACK",
     ):
         monkeypatch.delenv(name, raising=False)
 
@@ -54,8 +54,8 @@ class TestHashSessionId:
         int(head, 16)  # must be valid hex
 
     def test_stable_for_same_input(self) -> None:
-        a = tel.hash_session_id("godot-ai@1234")
-        b = tel.hash_session_id("godot-ai@1234")
+        a = tel.hash_session_id("runtime-studio-godot@1234")
+        b = tel.hash_session_id("runtime-studio-godot@1234")
         assert a == b
 
     def test_different_slugs_hash_differently(self) -> None:
@@ -80,7 +80,7 @@ class TestTelemetryConfig:
         baked-in production endpoint so the binary actually reports.
         Regression test for "telemetry on by default" — empty default
         endpoint used to mean zero traffic even when enabled."""
-        monkeypatch.delenv("GODOT_AI_TELEMETRY_ENDPOINT", raising=False)
+        monkeypatch.delenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", raising=False)
         config = tel.TelemetryConfig()
         assert config.enabled is True
         assert config.endpoint == tel.TelemetryConfig.DEFAULT_ENDPOINT
@@ -99,49 +99,49 @@ class TestTelemetryConfig:
         assert config.enabled is True
         assert config.endpoint == ""
 
-    @pytest.mark.parametrize("var", ["GODOT_AI_DISABLE_TELEMETRY", "DISABLE_TELEMETRY"])
+    @pytest.mark.parametrize("var", ["RUNTIME_STUDIO_DISABLE_TELEMETRY", "DISABLE_TELEMETRY"])
     def test_opt_out_via_env(self, monkeypatch, clean_env, isolated_data_dir, var: str) -> None:
         monkeypatch.setenv(var, "true")
         assert tel.TelemetryConfig().enabled is False
 
     @pytest.mark.parametrize("value", ["1", "true", "TRUE", "YES", "On"])
     def test_truthy_variants(self, monkeypatch, clean_env, isolated_data_dir, value: str) -> None:
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", value)
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", value)
         assert tel.TelemetryConfig().enabled is False
 
     @pytest.mark.parametrize("value", ["", "0", "false", "no", "anything-else"])
     def test_falsy_variants_keep_enabled(
         self, monkeypatch, clean_env, isolated_data_dir, value: str
     ) -> None:
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", value)
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", value)
         assert tel.TelemetryConfig().enabled is True
 
     def test_accepts_https_endpoint(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "https://example.com/x")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "https://example.com/x")
         assert tel.TelemetryConfig().endpoint == "https://example.com/x"
 
     def test_rejects_unsupported_scheme(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "ftp://example.com/")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "ftp://example.com/")
         assert tel.TelemetryConfig().endpoint == ""
 
     def test_rejects_localhost_by_default(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "http://127.0.0.1:7777")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "http://127.0.0.1:7777")
         assert tel.TelemetryConfig().endpoint == ""
 
     def test_allows_loopback_when_opted_in(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "http://127.0.0.1:7777")
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_ALLOW_LOOPBACK", "1")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "http://127.0.0.1:7777")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ALLOW_LOOPBACK", "1")
         assert tel.TelemetryConfig().endpoint == "http://127.0.0.1:7777"
 
     def test_default_timeout(self, clean_env, isolated_data_dir) -> None:
         assert tel.TelemetryConfig().timeout == tel.TelemetryConfig.DEFAULT_TIMEOUT
 
     def test_timeout_from_env(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_TIMEOUT", "5.0")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_TIMEOUT", "5.0")
         assert tel.TelemetryConfig().timeout == 5.0
 
     def test_invalid_timeout_falls_back(self, monkeypatch, clean_env, isolated_data_dir) -> None:
-        monkeypatch.setenv("GODOT_AI_TELEMETRY_TIMEOUT", "nope")
+        monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_TIMEOUT", "nope")
         assert tel.TelemetryConfig().timeout == tel.TelemetryConfig.DEFAULT_TIMEOUT
 
 
@@ -152,7 +152,7 @@ class TestTelemetryConfigCleanup:
         self, monkeypatch, clean_env, isolated_data_dir: Path
     ) -> None:
         """Both persisted files are removed when opt-out is active."""
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "true")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
         # Pre-create the files so cleanup has something to delete.
         (isolated_data_dir / "customer_uuid.txt").write_text("fake-uuid")
         (isolated_data_dir / "milestones.json").write_text("{}")
@@ -166,7 +166,7 @@ class TestTelemetryConfigCleanup:
         self, monkeypatch, clean_env, isolated_data_dir: Path
     ) -> None:
         """No error when files don't exist (fresh opt-out)."""
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "true")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
         # Ensure files are absent.
         for name in ("customer_uuid.txt", "milestones.json"):
             (isolated_data_dir / name).unlink(missing_ok=True)
@@ -180,7 +180,7 @@ class TestTelemetryConfigCleanup:
         """A deletion failure logs a warning and does not propagate."""
         import logging
 
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "true")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
         uuid_file = isolated_data_dir / "customer_uuid.txt"
         uuid_file.write_text("fake-uuid")
 
@@ -189,7 +189,7 @@ class TestTelemetryConfigCleanup:
 
         monkeypatch.setattr(type(uuid_file), "unlink", _bad_unlink)
         # Should complete without raising and must emit a warning:
-        with caplog.at_level(logging.WARNING, logger="godot_ai.telemetry"):
+        with caplog.at_level(logging.WARNING, logger="runtime_studio.telemetry"):
             config = tel.TelemetryConfig()
         assert config.enabled is False
         expected_err = "Could not remove telemetry file customer_uuid.txt"
@@ -301,7 +301,7 @@ class TestTelemetryCollector:
         milestones file, no worker thread. Locks in the contract
         documented in docs/TELEMETRY.md.
         """
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "1")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "1")
         collector = tel.TelemetryCollector()
 
         ## No disk artifacts created.
@@ -330,7 +330,7 @@ class TestPublicHelpers:
         assert tel.is_telemetry_enabled() is True
         assert tel._collector is None  # still not created
         ## And the env-override path returns False without creating one.
-        monkeypatch.setenv("GODOT_AI_DISABLE_TELEMETRY", "1")
+        monkeypatch.setenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", "1")
         assert tel.is_telemetry_enabled() is False
         assert tel._collector is None
 

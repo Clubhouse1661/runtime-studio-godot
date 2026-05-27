@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const MaterialHandler := preload("res://addons/godot_ai/handlers/material_handler.gd")
+const MaterialHandler := preload("res://addons/runtime_studio/handlers/material_handler.gd")
 
 ## Tests for MaterialHandler — StandardMaterial3D, ORM, CanvasItemMaterial,
 ## ShaderMaterial authoring.

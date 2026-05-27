@@ -17,7 +17,7 @@ func test_valid_simple_path_returns_empty() -> void:
 
 
 func test_valid_nested_path_returns_empty() -> void:
-	assert_eq(McpPathValidator.validate_resource_path("res://addons/godot_ai/plugin.gd"), "")
+	assert_eq(McpPathValidator.validate_resource_path("res://addons/runtime_studio/plugin.gd"), "")
 
 
 func test_valid_root_path_returns_empty() -> void:
@@ -67,7 +67,7 @@ func test_rejects_dotdot_nested() -> void:
 func test_rejects_deep_dotdot_chain() -> void:
 	## Defence in depth: even if a payload chains through legitimate-looking
 	## subdirectories first, the substring check fires.
-	var err := McpPathValidator.validate_resource_path("res://addons/godot_ai/../../../etc/passwd.gd")
+	var err := McpPathValidator.validate_resource_path("res://addons/runtime_studio/../../../etc/passwd.gd")
 	assert_false(err.is_empty(), "deep traversal chain must be rejected")
 
 
@@ -92,5 +92,5 @@ func test_well_formed_nested_path_passes_boundary_check() -> void:
 	## non-`..` traversal payload to assert rejection on. The boundary
 	## check exists as defence-in-depth for any future encoding-bypass
 	## that smuggles a `..` past the substring guard.
-	var safe := McpPathValidator.validate_resource_path("res://addons/godot_ai")
+	var safe := McpPathValidator.validate_resource_path("res://addons/runtime_studio")
 	assert_eq(safe, "", "well-formed nested path must validate")

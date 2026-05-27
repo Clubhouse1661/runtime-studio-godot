@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const TextureHandler := preload("res://addons/godot_ai/handlers/texture_handler.gd")
+const TextureHandler := preload("res://addons/runtime_studio/handlers/texture_handler.gd")
 
 ## Tests for TextureHandler — GradientTexture2D + NoiseTexture2D creation.
 

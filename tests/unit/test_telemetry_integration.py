@@ -14,9 +14,9 @@ import types
 import pytest
 from fastmcp import FastMCP
 
-from godot_ai import telemetry as tel
-from godot_ai.sessions.registry import Session, SessionRegistry
-from godot_ai.tools._meta_tool import register_manage_tool
+from runtime_studio import telemetry as tel
+from runtime_studio.sessions.registry import Session, SessionRegistry
+from runtime_studio.tools._meta_tool import register_manage_tool
 
 
 @pytest.fixture
@@ -33,7 +33,7 @@ def captured(isolated_data_dir):
 @pytest.fixture(autouse=True)
 def _restore_manage_registry():
     """Don't leak rollup registrations between tests."""
-    from godot_ai.tools import _meta_tool
+    from runtime_studio.tools import _meta_tool
 
     ops = dict(_meta_tool.MANAGE_TOOL_OPS)
     handlers = {k: dict(v) for k, v in _meta_tool.MANAGE_TOOL_HANDLERS.items()}
@@ -119,7 +119,7 @@ class TestSessionRegistryTelemetry:
         load-bearing guard against a transient telemetry crash taking
         down session management — assert it actually swallows.
         """
-        from godot_ai.sessions import registry as reg_mod
+        from runtime_studio.sessions import registry as reg_mod
 
         def boom(*_a, **_kw) -> None:
             raise RuntimeError("telemetry kaboom")
@@ -131,7 +131,7 @@ class TestSessionRegistryTelemetry:
         assert reg.get("demo@a3f2") is not None
 
     def test_unregister_swallows_telemetry_exceptions(self, captured, monkeypatch) -> None:
-        from godot_ai.sessions import registry as reg_mod
+        from runtime_studio.sessions import registry as reg_mod
 
         reg = SessionRegistry()
         reg.register(self._make_session())
@@ -187,7 +187,7 @@ class TestRollupCapturesOp:
 
 class TestPluginEventAllowlist:
     def test_known_event_recorded(self, captured) -> None:
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         ## Hand-drive _handle_event with a stub server: we only need its
         ## ``registry`` attribute. The dispatcher in the real code path
@@ -231,7 +231,7 @@ class TestPluginEventAllowlist:
         name past the allowlist. The canonical name is ``payload.name``;
         ``data`` is merged first so the canonical name always wins.
         """
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         reg = SessionRegistry()
         session = Session(
@@ -264,7 +264,7 @@ class TestPluginEventAllowlist:
         assert "other" not in plugin_events[0].data
 
     def test_payload_unknown_fields_are_dropped(self, captured) -> None:
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         reg = SessionRegistry()
         session = Session(
@@ -305,7 +305,7 @@ class TestPluginEventAllowlist:
         }
 
     def test_malformed_payload_values_are_replaced_safely(self, captured) -> None:
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         reg = SessionRegistry()
         session = Session(
@@ -329,7 +329,7 @@ class TestPluginEventAllowlist:
                     "data": {
                         "status": "res://unexpected",
                         "from_version": "1.2.3",
-                        "to_version": "res://private-game/addons/godot_ai",
+                        "to_version": "res://private-game/addons/runtime_studio",
                         "error": "/Users/alice/private-game/full editor log",
                         "logs": "full editor log",
                     },
@@ -350,7 +350,7 @@ class TestPluginEventAllowlist:
         assert "logs" not in rec.data
 
     def test_plugin_reload_error_message_is_replaced(self, captured) -> None:
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         reg = SessionRegistry()
         session = Session(
@@ -391,7 +391,7 @@ class TestPluginEventAllowlist:
         }
 
     def test_plugin_reload_and_dev_server_enums_default_unknown(self, captured) -> None:
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         reg = SessionRegistry()
         session = Session(
@@ -430,7 +430,7 @@ class TestPluginEventAllowlist:
         }
 
     def test_unknown_event_dropped(self, captured) -> None:
-        from godot_ai.transport import websocket as ws_mod
+        from runtime_studio.transport import websocket as ws_mod
 
         reg = SessionRegistry()
         session = Session(

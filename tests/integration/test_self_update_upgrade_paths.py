@@ -39,7 +39,7 @@ def test_current_runner_upgrades_to_synthetic_next_without_parse_errors(
     prepare_project_shell(project)
     write_forward_driver(project)
 
-    base_addon = project / "addons" / "godot_ai"
+    base_addon = project / "addons" / "runtime_studio"
     copy_addon_tree(PLUGIN_ROOT, base_addon)
     patch_fixture_addon(
         base_addon,
@@ -49,7 +49,7 @@ def test_current_runner_upgrades_to_synthetic_next_without_parse_errors(
         skip_server_start=True,
     )
 
-    vnext_addon = project / ".self-update-vnext" / "addons" / "godot_ai"
+    vnext_addon = project / ".self-update-vnext" / "addons" / "runtime_studio"
     copy_addon_tree(PLUGIN_ROOT, vnext_addon)
     patch_fixture_addon(
         vnext_addon,
@@ -91,7 +91,7 @@ def patch_synthetic_next_shape(addon_dir: Path) -> None:
         """@tool
 extends RefCounted
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
 
 static func marker() -> String:

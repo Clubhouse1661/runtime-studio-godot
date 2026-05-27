@@ -11,13 +11,13 @@ from types import ModuleType
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-PLUGIN_ROOT = ROOT / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = ROOT / "plugin" / "addons" / "runtime_studio"
 SCRIPT = ROOT / "script" / "local-self-update-smoke"
 
 TEST_ZIP_DIR = "_test_update_zip"
-TEST_ZIP_NAME = "godot-ai-plugin.zip"
+TEST_ZIP_NAME = "runtime-studio-godot-plugin.zip"
 TEST_ZIP_RES_PATH = f"res://{TEST_ZIP_DIR}/{TEST_ZIP_NAME}"
-TEST_TEMP_DIR = "user://godot_ai_self_update_upgrade_test/"
+TEST_TEMP_DIR = "user://runtime_studio_self_update_upgrade_test/"
 TEST_HTTP_PORT = 18100
 TEST_WS_PORT = 19600
 
@@ -164,7 +164,7 @@ func _process(_delta: float) -> void:
 func _start_runner() -> void:
 \t_started = true
 \tprint("SELF_UPDATE_TEST | starting runner")
-\tvar Runner := load("res://addons/godot_ai/update_reload_runner.gd")
+\tvar Runner := load("res://addons/runtime_studio/update_reload_runner.gd")
 \tif Runner == null:
 \t\tpush_error("SELF_UPDATE_TEST | failed to load runner")
 \t\t_finished = true
@@ -178,7 +178,7 @@ func _start_runner() -> void:
 func _validate_install() -> void:
 \t_finished = true
 \tvar Handler := load(
-\t\t"res://addons/godot_ai/handlers/self_update_synthetic_next.gd"
+\t\t"res://addons/runtime_studio/handlers/self_update_synthetic_next.gd"
 \t)
 \tif Handler == null:
 \t\tpush_error("SELF_UPDATE_TEST | synthetic handler failed to load")
@@ -227,9 +227,9 @@ def run_godot_editor(
 ) -> str:
     env = os.environ.copy()
     if allow_headless:
-        env["GODOT_AI_ALLOW_HEADLESS"] = "1"
+        env["RUNTIME_STUDIO_ALLOW_HEADLESS"] = "1"
     else:
-        env.pop("GODOT_AI_ALLOW_HEADLESS", None)
+        env.pop("RUNTIME_STUDIO_ALLOW_HEADLESS", None)
     command = [godot_bin]
     if headless:
         command.append("--headless")
@@ -277,17 +277,17 @@ def extract_addon_from_zip(zip_path: Path, target_addon: Path) -> None:
     target_resolved = target_addon.resolve()
     with zipfile.ZipFile(zip_path) as zf:
         for info in zf.infolist():
-            if not info.filename.startswith("addons/godot_ai/") or info.is_dir():
+            if not info.filename.startswith("addons/runtime_studio/") or info.is_dir():
                 continue
             raw_filename = getattr(info, "orig_filename", info.filename)
             # ZIP spec uses POSIX-style forward-slash separators; parsing the
             # member name as PurePosixPath stops a Windows host from
-            # reinterpreting an entry like "addons/godot_ai/C:evil.txt" as a
+            # reinterpreting an entry like "addons/runtime_studio/C:evil.txt" as a
             # drive component (which would make `target_addon / rel` discard
             # the prefix and write outside the fixture).
             if "\\" in raw_filename or "\\" in info.filename:
                 raise ValueError(f"Refusing unsafe zip entry {raw_filename!r}: contains backslash")
-            rel = PurePosixPath(info.filename).relative_to("addons/godot_ai")
+            rel = PurePosixPath(info.filename).relative_to("addons/runtime_studio")
             if rel.is_absolute() or any(part in ("", ".", "..") for part in rel.parts):
                 raise ValueError(
                     f"Refusing unsafe zip entry {info.filename!r}: relative path "
@@ -312,7 +312,7 @@ def release_zip_from_cache(cache_dir: Path, tag: str) -> Path | None:
     candidates = [
         cache_dir / tag / TEST_ZIP_NAME,
         cache_dir / f"{tag}.zip",
-        cache_dir / f"godot-ai-plugin-{tag}.zip",
-        cache_dir / f"{tag}-godot-ai-plugin.zip",
+        cache_dir / f"runtime-studio-godot-plugin-{tag}.zip",
+        cache_dir / f"{tag}-runtime-studio-godot-plugin.zip",
     ]
     return next((path for path in candidates if path.is_file()), None)

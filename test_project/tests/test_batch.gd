@@ -1,10 +1,10 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const BatchHandler := preload("res://addons/godot_ai/handlers/batch_handler.gd")
-const NodeHandler := preload("res://addons/godot_ai/handlers/node_handler.gd")
+const BatchHandler := preload("res://addons/runtime_studio/handlers/batch_handler.gd")
+const NodeHandler := preload("res://addons/runtime_studio/handlers/node_handler.gd")
 
 ## Tests for BatchHandler — stop-on-first-error and rollback semantics.
 

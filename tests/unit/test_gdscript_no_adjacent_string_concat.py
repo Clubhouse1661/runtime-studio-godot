@@ -28,7 +28,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCAN_ROOTS = (
-    REPO_ROOT / "plugin" / "addons" / "godot_ai",
+    REPO_ROOT / "plugin" / "addons" / "runtime_studio",
     REPO_ROOT / "test_project" / "tests",
 )
 

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const AudioHandler := preload("res://addons/godot_ai/handlers/audio_handler.gd")
+const AudioHandler := preload("res://addons/runtime_studio/handlers/audio_handler.gd")
 
 ## Tests for AudioHandler — AudioStreamPlayer / 2D / 3D node authoring,
 ## stream assignment, playback properties, editor-preview play/stop, and

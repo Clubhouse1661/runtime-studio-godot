@@ -1,7 +1,7 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
 ## Tests for McpDispatcher — specifically the crash-detection guardrail
 ## that catches handlers returning malformed results (null, empty dict,

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const SceneHandler := preload("res://addons/godot_ai/handlers/scene_handler.gd")
+const SceneHandler := preload("res://addons/runtime_studio/handlers/scene_handler.gd")
 
 ## Tests for SceneHandler — scene tree reading and node search.
 ## Runs against the test_project main.tscn scene:

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const SignalHandler := preload("res://addons/godot_ai/handlers/signal_handler.gd")
+const SignalHandler := preload("res://addons/runtime_studio/handlers/signal_handler.gd")
 
 ## Tests for SignalHandler — signal listing, connecting, and disconnecting.
 

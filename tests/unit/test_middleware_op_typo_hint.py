@@ -10,8 +10,8 @@ from fastmcp.exceptions import ToolError
 from mcp.types import CallToolRequestParams
 from pydantic import TypeAdapter, ValidationError
 
-from godot_ai.middleware import HintOpTypoOnManage
-from godot_ai.tools._meta_tool import MANAGE_TOOL_OPS
+from runtime_studio.middleware import HintOpTypoOnManage
+from runtime_studio.tools._meta_tool import MANAGE_TOOL_OPS
 
 
 @dataclass

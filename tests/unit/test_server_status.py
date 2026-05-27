@@ -2,9 +2,9 @@ from pathlib import Path
 
 from starlette.testclient import TestClient
 
-import godot_ai as _godot_ai_pkg
-from godot_ai import __version__
-from godot_ai.server import create_server
+import runtime_studio as _runtime_studio_pkg
+from runtime_studio import __version__
+from runtime_studio.server import create_server
 
 
 def test_status_route_reports_live_server_version():
@@ -16,22 +16,22 @@ def test_status_route_reports_live_server_version():
     ## reaching the status route. See audit-v2 finding #1 (#345).
     client = TestClient(app, base_url="http://127.0.0.1")
 
-    response = client.get("/godot-ai/status")
+    response = client.get("/runtime-studio-godot/status")
 
     assert response.status_code == 200
     assert response.json() == {
-        "name": "godot-ai",
+        "name": "runtime-studio-godot",
         "server_version": __version__,
         "ws_port": 9555,
         "tool_surface": "rollup",
         "exclude_domains": ["audio", "theme"],
-        "package_path": str(Path(_godot_ai_pkg.__file__).resolve().parent),
+        "package_path": str(Path(_runtime_studio_pkg.__file__).resolve().parent),
     }
 
 
 def test_status_route_package_path_points_at_loaded_package_dir():
     ## #416: the editor's "Incompatible server" banner consumes
-    ## `package_path` so the user can tell which `src/godot_ai/` is
+    ## `package_path` so the user can tell which `src/runtime_studio/` is
     ## actually serving the port — critical in a multi-worktree setup
     ## where the root .venv may resolve to a different branch than the
     ## worktree the user is editing. Pin that the field is an absolute,
@@ -40,7 +40,7 @@ def test_status_route_package_path_points_at_loaded_package_dir():
     app = server.http_app(transport="streamable-http")
     client = TestClient(app, base_url="http://127.0.0.1")
 
-    response = client.get("/godot-ai/status")
+    response = client.get("/runtime-studio-godot/status")
 
     assert response.status_code == 200
     payload = response.json()
@@ -49,5 +49,5 @@ def test_status_route_package_path_points_at_loaded_package_dir():
         "package_path must be absolute so the user can match it against ps/Get-Process output"
     )
     assert (package_path / "__init__.py").exists(), (
-        "package_path must point at the actual loaded godot_ai package dir"
+        "package_path must point at the actual loaded runtime_studio package dir"
     )

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const ProjectHandler := preload("res://addons/godot_ai/handlers/project_handler.gd")
+const ProjectHandler := preload("res://addons/runtime_studio/handlers/project_handler.gd")
 
 ## Tests for ProjectHandler — project settings and filesystem search.
 

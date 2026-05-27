@@ -1,7 +1,7 @@
 @tool
 extends McpTestSuite
 
-const Telemetry := preload("res://addons/godot_ai/telemetry.gd")
+const Telemetry := preload("res://addons/runtime_studio/telemetry.gd")
 
 ## Tests for the plugin-side telemetry helper.
 ##
@@ -28,7 +28,7 @@ class StubConnection extends RefCounted:
 		connection_state_changed.emit(is_open)
 
 
-const _TENV1 := "GODOT_AI_DISABLE_TELEMETRY"
+const _TENV1 := "RUNTIME_STUDIO_DISABLE_TELEMETRY"
 const _TENV2 := "DISABLE_TELEMETRY"
 
 var _saved_tenv1: Variant = null
@@ -70,7 +70,7 @@ func _clear_telemetry_env_vars() -> void:
 
 func test_disabled_when_editor_setting_is_false() -> void:
 	## Regression guard for the UI opt-out / plugin-reload race:
-	## _inject_telemetry_env unsets GODOT_AI_DISABLE_TELEMETRY right after
+	## _inject_telemetry_env unsets RUNTIME_STUDIO_DISABLE_TELEMETRY right after
 	## OS.create_process, so the new plugin instance's Telemetry constructor
 	## must fall back to the persisted EditorSetting instead of re-enabling.
 	_clear_telemetry_env_vars()

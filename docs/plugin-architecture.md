@@ -1,4 +1,4 @@
-# Godot AI — Plugin Architecture
+# Runtime Studio for Godot — Plugin Architecture
 
 *Updated 2026-05-08 (document self-update runner/update-manager/plugin boundary and compatibility rules; previous: add `PreserveGodotCommandErrorData` to the middleware list and note registration-order is load-bearing; refresh file-structure tree, server-side modules, session metadata, and handshake JSON to match shipped code; add `<domain>_manage` rollups + resources + middleware to server responsibilities)*
 
@@ -22,13 +22,13 @@ AI Client → MCP (streamable-http, SSE, stdio) → Python FastMCP server
                                                  ↓
                                        WebSocket (default :9500,
                                        overridable via the
-                                       godot_ai/ws_port EditorSetting
+                                       runtime_studio/ws_port EditorSetting
                                        under Editor Settings > Plugins)
                                                  ↓
                                        Godot EditorPlugin
 ```
 
-Internal companion: `godot_ai/managed_server_ws_port` is an EditorSetting the plugin uses to remember the managed server's resolved port across editor restarts and adoption — not a user knob.
+Internal companion: `runtime_studio/managed_server_ws_port` is an EditorSetting the plugin uses to remember the managed server's resolved port across editor restarts and adoption — not a user knob.
 
 The plugin is persistent. It does not spin up per command. That is the foundation for:
 
@@ -54,7 +54,7 @@ That includes:
 - request validation and structured error mapping (`protocol/errors.py`)
 - job tracking for long-running operations and the deferred-response pattern for replies that flow back over a different channel (game capture)
 - the `--exclude-domains` CLI flag and dock UI knob, so tool-capped clients (Antigravity, etc.) can drop entire domains at server start while keeping the four core tools alive
-- CLI entry points for diagnostics and packaging (`python -m godot_ai`, the dev `--reload` runner via `src/godot_ai/asgi.py`)
+- CLI entry points for diagnostics and packaging (`python -m runtime_studio`, the dev `--reload` runner via `src/runtime_studio/asgi.py`)
 
 The plugin stays thin. Complex orchestration belongs in Python; direct editor work belongs in Godot.
 
@@ -63,14 +63,14 @@ The plugin stays thin. Complex orchestration belongs in Python; direct editor wo
 ## Plugin File Structure
 
 ```text
-plugin/addons/godot_ai/
+plugin/addons/runtime_studio/
 ├── plugin.cfg
 ├── plugin.gd                    ## EditorPlugin lifecycle, handler registration
 ├── connection.gd                ## WebSocket client + send_deferred_response
 ├── dispatcher.gd                ## command routing, frame budget, DEFERRED_RESPONSE sentinel
 ├── mcp_dock.gd                  ## editor dock: status, clients, logs, self-update banner, Tools tab
 ├── client_configurator.gd       ## thin facade for client config (configure/remove/status)
-├── tool_catalog.gd              ## mirrors src/godot_ai/tools/domains.py; CI-enforced
+├── tool_catalog.gd              ## mirrors src/runtime_studio/tools/domains.py; CI-enforced
 ├── update_reload_runner.gd      ## self-update single-pass extract, scan, and re-enable handoff
 ├── handlers/                    ## one file per domain; ~30 handlers
 │   ├── editor_handler.gd        ## screenshot, logs, monitors, reload_plugin, quit_editor
@@ -112,17 +112,17 @@ plugin/addons/godot_ai/
 
 The server-side counterparts live in:
 
-- `src/godot_ai/server.py` — FastMCP entry point, lifespan, tool/resource registration, `--exclude-domains`
-- `src/godot_ai/asgi.py` — uvicorn factory for `--reload`; ships `StaleMcpSessionDiagnosticMiddleware`
-- `src/godot_ai/transport/websocket.py` — WebSocket server adopting/owning the :9500 socket
-- `src/godot_ai/sessions/registry.py` — multi-session tracking, active resolution, substring matching
-- `src/godot_ai/godot_client/client.py` — typed async client; raises `GodotCommandError`
-- `src/godot_ai/runtime/direct.py` — `DirectRuntime`, the in-process runtime adapter that handlers depend on
-- `src/godot_ai/handlers/` — shared sync handlers; `_readiness.py` gates writes; `_target.py` resolves nodes
-- `src/godot_ai/tools/` — MCP tool wrappers per domain + `_meta_tool.py::register_manage_tool` rollup factory + `domains.py` (CI-paired with `tool_catalog.gd`)
-- `src/godot_ai/resources/` — read-only `godot://...` URI handlers
-- `src/godot_ai/middleware/` — `PreserveGodotCommandErrorData`, `StripClientWrapperKwargs`, `ParseStringifiedParams`, `HintOpTypoOnManage` (registration order is load-bearing — see `server.py` docstring + `tests/unit/test_server_middleware_order.py`)
-- `src/godot_ai/protocol/` — envelope types and error codes (kept in sync with `utils/error_codes.gd`)
+- `src/runtime_studio/server.py` — FastMCP entry point, lifespan, tool/resource registration, `--exclude-domains`
+- `src/runtime_studio/asgi.py` — uvicorn factory for `--reload`; ships `StaleMcpSessionDiagnosticMiddleware`
+- `src/runtime_studio/transport/websocket.py` — WebSocket server adopting/owning the :9500 socket
+- `src/runtime_studio/sessions/registry.py` — multi-session tracking, active resolution, substring matching
+- `src/runtime_studio/godot_client/client.py` — typed async client; raises `GodotCommandError`
+- `src/runtime_studio/runtime/direct.py` — `DirectRuntime`, the in-process runtime adapter that handlers depend on
+- `src/runtime_studio/handlers/` — shared sync handlers; `_readiness.py` gates writes; `_target.py` resolves nodes
+- `src/runtime_studio/tools/` — MCP tool wrappers per domain + `_meta_tool.py::register_manage_tool` rollup factory + `domains.py` (CI-paired with `tool_catalog.gd`)
+- `src/runtime_studio/resources/` — read-only `godot://...` URI handlers
+- `src/runtime_studio/middleware/` — `PreserveGodotCommandErrorData`, `StripClientWrapperKwargs`, `ParseStringifiedParams`, `HintOpTypoOnManage` (registration order is load-bearing — see `server.py` docstring + `tests/unit/test_server_middleware_order.py`)
+- `src/runtime_studio/protocol/` — envelope types and error codes (kept in sync with `utils/error_codes.gd`)
 
 ---
 
@@ -195,7 +195,7 @@ The update path is intentionally split so the runner can stay focused on the fra
 - `utils/update_manager.gd` owns pre-runner work: release lookup, download, staging, version checks, and install gating. Its `class_name McpUpdateManager` declaration is published API surface and must remain unless replaced by a same-path compatibility shim.
 - `plugin.gd::prepare_for_update_reload()` owns pre-runner server stop prep. It stops the managed server and resets the spawn guard before the runner starts. Do not move this server lifecycle prep into the runner.
 - `plugin.gd::install_downloaded_update(...)` is the handoff point. It calls `prepare_for_update_reload()`, detaches the dock so it survives plugin teardown, creates the runner, parents it to the editor root, and calls `runner.start(...)`.
-- `update_reload_runner.gd` owns the install-and-reload sequence from that handoff onward: extract files into `addons/godot_ai/`, keep rollback bookkeeping, scan the filesystem, re-enable the plugin, clean up update temp state, and free itself.
+- `update_reload_runner.gd` owns the install-and-reload sequence from that handoff onward: extract files into `addons/runtime_studio/`, keep rollback bookkeeping, scan the filesystem, re-enable the plugin, clean up update temp state, and free itself.
 
 The runner's key safety property is a consistent snapshot before scan. It writes all staged new and existing files for v(N+1) in one install pass, then runs one `EditorFileSystem.scan()` before enabling the plugin. This avoids Godot parsing a mixed old/new plugin snapshot and reusing stale Script-object content.
 
@@ -213,7 +213,7 @@ The session model exists so the server can distinguish live editor instances and
 
 ### Session Metadata
 
-- session id, formatted `<project-slug>@<4hex>` (e.g. `godot-ai@a3f2`) — slug derives from the project directory name so agents can recognise which editor they're targeting; the hex suffix disambiguates same-project twins
+- session id, formatted `<project-slug>@<4hex>` (e.g. `runtime-studio-godot@a3f2`) — slug derives from the project directory name so agents can recognise which editor they're targeting; the hex suffix disambiguates same-project twins
 - name (project basename)
 - Godot version, plugin version, server version
 - project path
@@ -270,12 +270,12 @@ The plugin does this over Godot's editor-debugger channel — the same
 channel Godot itself uses for the Remote scene tree, profiler, and
 live-edit — via three cooperating pieces:
 
-- `plugin/addons/godot_ai/debugger/mcp_debugger_plugin.gd` — an
+- `plugin/addons/runtime_studio/debugger/mcp_debugger_plugin.gd` — an
   `EditorDebuggerPlugin` that registers on `_enter_tree`. `_has_capture`
   claims the `"mcp"` prefix. `_capture` routes the replies that come back
   from the game: `mcp:hello` (boot beacon), `mcp:screenshot_response`,
   `mcp:screenshot_error`.
-- `plugin/addons/godot_ai/runtime/game_helper.gd` — an autoload the plugin
+- `plugin/addons/runtime_studio/runtime/game_helper.gd` — an autoload the plugin
   registers as `_mcp_game_helper` via direct `ProjectSettings.set_setting`
   + `save()` on `_enter_tree` (the `EditorPlugin.add_autoload_singleton`
   convenience method only mutates in-memory settings and doesn't persist
@@ -350,12 +350,12 @@ This should be visible in both the protocol and the user-facing docs.
 
 ### Handshake
 
-Plugin to server (initial handshake — exact field set, see [`connection.gd::_send_handshake`](../plugin/addons/godot_ai/connection.gd)):
+Plugin to server (initial handshake — exact field set, see [`connection.gd::_send_handshake`](../plugin/addons/runtime_studio/connection.gd)):
 
 ```json
 {
   "type": "handshake",
-  "session_id": "godot-ai@a3f2",
+  "session_id": "runtime-studio-godot@a3f2",
   "godot_version": "4.6.0",
   "project_path": "/path/to/project",
   "plugin_version": "2.2.3",

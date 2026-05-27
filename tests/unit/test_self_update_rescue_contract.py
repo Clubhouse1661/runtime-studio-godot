@@ -4,7 +4,7 @@ Users on plugin v2.2.x / v2.3.0 have a broken `_is_safe_zip_addon_file`
 guard in `update_reload_runner.gd`: it rejects every zip path that ends in
 `/`. Their installed runner is what runs against the *next* release zip, so
 the next zip cannot contain any zero-byte directory entries (e.g.
-`addons/godot_ai/utils/`) — those would land in the safety check and abort
+`addons/runtime_studio/utils/`) — those would land in the safety check and abort
 the install, stranding them on the broken version.
 
 The rescue: `release.yml` builds zips with `zip -D`, which strips directory
@@ -29,26 +29,26 @@ from __future__ import annotations
 import zipfile
 from pathlib import Path
 
-ZIP_ADDON_PREFIX = "addons/godot_ai/"
+ZIP_ADDON_PREFIX = "addons/runtime_studio/"
 
 # Files a real release zip would carry: at minimum plugin.cfg + plugin.gd at
 # the addon root (the runner errors out if either is missing) plus one nested
-# file so `addons/godot_ai/utils/` is a non-trivial directory entry.
+# file so `addons/runtime_studio/utils/` is a non-trivial directory entry.
 _REAL_FILES: tuple[tuple[str, bytes], ...] = (
-    ("addons/godot_ai/plugin.cfg", b'[plugin]\nname="godot-ai"\n'),
-    ("addons/godot_ai/plugin.gd", b"@tool\nextends EditorPlugin\n"),
-    ("addons/godot_ai/utils/example.gd", b"extends RefCounted\n"),
-    ("godot-ai-LICENSE.txt", b"MIT\n"),
+    ("addons/runtime_studio/plugin.cfg", b'[plugin]\nname="runtime-studio-godot"\n'),
+    ("addons/runtime_studio/plugin.gd", b"@tool\nextends EditorPlugin\n"),
+    ("addons/runtime_studio/utils/example.gd", b"extends RefCounted\n"),
+    ("runtime-studio-godot-LICENSE.txt", b"MIT\n"),
 )
 
 # Directory entries an unstripped `zip -r` (without `-D`) would emit. Note
-# `addons/godot_ai/` itself is harmless to the broken runner — its rel_path
+# `addons/runtime_studio/` itself is harmless to the broken runner — its rel_path
 # trims to "" and is skipped on `is_empty()`. The hazard is the *deeper*
 # directory entries whose rel_path is non-empty but ends in `/`.
 _DIR_ENTRIES: tuple[str, ...] = (
     "addons/",
-    "addons/godot_ai/",
-    "addons/godot_ai/utils/",
+    "addons/runtime_studio/",
+    "addons/runtime_studio/utils/",
 )
 
 
@@ -142,7 +142,7 @@ def test_fixture_with_dirs_actually_contains_directory_entries(tmp_path: Path) -
     _build_fixture_zip(zip_path, include_directory_entries=True)
     entries = _list_zip_entries(zip_path)
     dir_entries = [e for e in entries if e.endswith("/")]
-    assert "addons/godot_ai/utils/" in dir_entries, (
+    assert "addons/runtime_studio/utils/" in dir_entries, (
         "fixture should include a deeper directory entry that exercises the "
         "broken runner's safety-check rejection (rel_path non-empty, ends with /)"
     )

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const InputHandler := preload("res://addons/godot_ai/handlers/input_handler.gd")
+const InputHandler := preload("res://addons/runtime_studio/handlers/input_handler.gd")
 
 ## Tests for InputHandler — input action listing, adding, removing, binding.
 

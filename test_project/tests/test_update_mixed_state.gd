@@ -8,7 +8,7 @@ extends McpTestSuite
 ## Cases run against a scratch dir under `user://` so the tests never
 ## touch the real addons tree or rely on its current contents.
 
-const UpdateMixedState := preload("res://addons/godot_ai/utils/update_mixed_state.gd")
+const UpdateMixedState := preload("res://addons/runtime_studio/utils/update_mixed_state.gd")
 
 var _scratch_dir: String
 
@@ -117,7 +117,7 @@ func test_find_backups_ignores_non_backup_files() -> void:
 
 
 func test_find_backups_returns_empty_for_missing_dir() -> void:
-	## A hypothetical bare clone where addons/godot_ai/ doesn't exist (or
+	## A hypothetical bare clone where addons/runtime_studio/ doesn't exist (or
 	## was removed) shouldn't crash the scanner.
 	var nonexistent := _scratch_dir.path_join("does_not_exist")
 	assert_false(
@@ -157,7 +157,7 @@ func test_diagnose_carries_structured_fields() -> void:
 	assert_has_key(diag, "message")
 	var message: String = diag["message"]
 	assert_true(
-		message.contains("addons/godot_ai/"),
+		message.contains("addons/runtime_studio/"),
 		"message should name the addons dir so the operator knows where to look",
 	)
 	assert_true(

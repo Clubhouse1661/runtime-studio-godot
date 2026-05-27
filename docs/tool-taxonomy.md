@@ -1,4 +1,4 @@
-# Godot AI — Tool Taxonomy
+# Runtime Studio for Godot — Tool Taxonomy
 
 *Updated 2026-04-29 (note about `<domain>_manage` rollups; mark shipped polish multipliers)*
 

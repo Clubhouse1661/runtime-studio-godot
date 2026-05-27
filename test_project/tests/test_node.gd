@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const NodeHandler := preload("res://addons/godot_ai/handlers/node_handler.gd")
+const NodeHandler := preload("res://addons/runtime_studio/handlers/node_handler.gd")
 
 ## Tests for NodeHandler — node reads and writes.
 

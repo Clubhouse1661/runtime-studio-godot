@@ -39,8 +39,8 @@ sleep-and-pray; poll this field.
 
 1. **Is `_mcp_game_helper` actually in the project's autoload list?**
    - Open `Project Settings → Autoload`, or grep `project.godot` for
-     `_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"`.
-   - If missing: disable + re-enable the Godot AI plugin in Project Settings →
+     `_mcp_game_helper="*res://addons/runtime_studio/runtime/game_helper.gd"`.
+   - If missing: disable + re-enable the Runtime Studio for Godot plugin in Project Settings →
      Plugins. Re-enabling fires `_ensure_game_helper_autoload()` which writes
      the entry and persists it via `ProjectSettings.save()`.
 2. **Was the game launched via `project_run`?**
@@ -54,7 +54,7 @@ sleep-and-pray; poll this field.
      is actually running.
 4. **Did the game subprocess actually boot?**
    - Look at the Godot Output panel for
-     `[godot_ai game_helper] registered mcp capture (debugger active=true, logger=true)`.
+     `[runtime_studio game_helper] registered mcp capture (debugger active=true, logger=true)`.
      If that line never prints, the autoload didn't run. If
      `debugger active=false`, you're in a headless / custom-main-loop /
      exported build where the debugger channel is off.

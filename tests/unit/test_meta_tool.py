@@ -8,9 +8,9 @@ from unittest.mock import AsyncMock
 import pytest
 from fastmcp import FastMCP
 
-from godot_ai.godot_client.client import GodotCommandError
-from godot_ai.protocol.errors import ErrorCode
-from godot_ai.tools._meta_tool import (
+from runtime_studio.godot_client.client import GodotCommandError
+from runtime_studio.protocol.errors import ErrorCode
+from runtime_studio.tools._meta_tool import (
     MANAGE_TOOL_HANDLERS,
     MANAGE_TOOL_OPS,
     MANAGE_TOOL_RESOURCE_FORMS,

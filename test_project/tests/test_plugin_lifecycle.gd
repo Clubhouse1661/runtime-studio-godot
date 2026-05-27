@@ -7,7 +7,7 @@ extends McpTestSuite
 ## flag persisted across disable/enable and made the re-enabled plugin's
 ## _start_server short-circuit with no server to adopt.
 
-const GodotAiPlugin := preload("res://addons/godot_ai/plugin.gd")
+const RuntimeStudioPlugin := preload("res://addons/runtime_studio/plugin.gd")
 
 class _RefreshDock extends McpDock:
 	var refresh_calls := 0
@@ -15,7 +15,7 @@ class _RefreshDock extends McpDock:
 		refresh_calls += 1
 
 
-class _ProofPlugin extends GodotAiPlugin:
+class _ProofPlugin extends RuntimeStudioPlugin:
 	var listener_pids: Array[int] = []
 	var managed_record := {"pid": 0, "version": "", "ws_port": 0}
 	var live_status := {"name": "", "version": "", "ws_port": 0, "status_code": 0}
@@ -43,10 +43,10 @@ class _ProofPlugin extends GodotAiPlugin:
 	func _pid_alive_for_proof(pid: int) -> bool:
 		return alive_pids.has(pid)
 
-	func _pid_cmdline_is_godot_ai_for_proof(pid: int) -> bool:
+	func _pid_cmdline_is_runtime_studio_for_proof(pid: int) -> bool:
 		return branded_pids.has(pid)
 
-	func _pid_cmdline_is_godot_ai(pid: int) -> bool:
+	func _pid_cmdline_is_runtime_studio(pid: int) -> bool:
 		return branded_pids.has(pid)
 
 	func _probe_live_server_status_for_port(_port: int) -> Dictionary:
@@ -86,23 +86,23 @@ func suite_name() -> String:
 func setup() -> void:
 	## The flag is a class-level static; leave it in a known state between
 	## tests so ordering can't mask a regression.
-	GodotAiPlugin._server_started_this_session = false
+	RuntimeStudioPlugin._server_started_this_session = false
 
 
 func teardown() -> void:
-	GodotAiPlugin._server_started_this_session = false
+	RuntimeStudioPlugin._server_started_this_session = false
 	## Stop-finalize tests write to EditorSettings + the pid-file on disk;
 	## scrub both so state doesn't leak across tests or outlast the suite.
 	var es := EditorInterface.get_editor_settings()
 	if es != null:
-		if es.has_setting(GodotAiPlugin.MANAGED_SERVER_PID_SETTING):
-			es.set_setting(GodotAiPlugin.MANAGED_SERVER_PID_SETTING, 0)
-		if es.has_setting(GodotAiPlugin.MANAGED_SERVER_VERSION_SETTING):
-			es.set_setting(GodotAiPlugin.MANAGED_SERVER_VERSION_SETTING, "")
-		if es.has_setting(GodotAiPlugin.MANAGED_SERVER_WS_PORT_SETTING):
-			es.set_setting(GodotAiPlugin.MANAGED_SERVER_WS_PORT_SETTING, 0)
-	if FileAccess.file_exists(GodotAiPlugin.SERVER_PID_FILE):
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(GodotAiPlugin.SERVER_PID_FILE))
+		if es.has_setting(RuntimeStudioPlugin.MANAGED_SERVER_PID_SETTING):
+			es.set_setting(RuntimeStudioPlugin.MANAGED_SERVER_PID_SETTING, 0)
+		if es.has_setting(RuntimeStudioPlugin.MANAGED_SERVER_VERSION_SETTING):
+			es.set_setting(RuntimeStudioPlugin.MANAGED_SERVER_VERSION_SETTING, "")
+		if es.has_setting(RuntimeStudioPlugin.MANAGED_SERVER_WS_PORT_SETTING):
+			es.set_setting(RuntimeStudioPlugin.MANAGED_SERVER_WS_PORT_SETTING, 0)
+	if FileAccess.file_exists(RuntimeStudioPlugin.SERVER_PID_FILE):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(RuntimeStudioPlugin.SERVER_PID_FILE))
 
 
 func test_exit_tree_resets_spawn_guard() -> void:
@@ -111,8 +111,8 @@ func test_exit_tree_resets_spawn_guard() -> void:
 	## plugin instance's _enter_tree calls _start_server, the guard fires
 	## and no respawn happens — the dock sits in "reconnecting…" forever.
 	## Fix: _exit_tree must reset the flag so the next enable starts clean.
-	GodotAiPlugin._server_started_this_session = true
-	var plugin := GodotAiPlugin.new()
+	RuntimeStudioPlugin._server_started_this_session = true
+	var plugin := RuntimeStudioPlugin.new()
 	## _stop_server early-returns on the default _server_pid (-1), and every
 	## teardown branch in _exit_tree is null-guarded — so calling it on a
 	## freshly constructed (never-entered-tree) instance is safe and does
@@ -120,7 +120,7 @@ func test_exit_tree_resets_spawn_guard() -> void:
 	plugin._exit_tree()
 	plugin.free()
 	assert_true(
-		not GodotAiPlugin._server_started_this_session,
+		not RuntimeStudioPlugin._server_started_this_session,
 		"_exit_tree must clear the re-entrancy guard so the re-enabled plugin respawns"
 	)
 
@@ -129,12 +129,12 @@ func test_prepare_for_update_reload_resets_spawn_guard() -> void:
 	## Companion path used by the dock's Update button flow. Kept distinct
 	## from _exit_tree because the update sequence calls this *before* the
 	## disable/enable toggle, whereas _exit_tree runs *during* teardown.
-	GodotAiPlugin._server_started_this_session = true
-	var plugin := GodotAiPlugin.new()
+	RuntimeStudioPlugin._server_started_this_session = true
+	var plugin := RuntimeStudioPlugin.new()
 	plugin.prepare_for_update_reload()
 	plugin.free()
 	assert_true(
-		not GodotAiPlugin._server_started_this_session,
+		not RuntimeStudioPlugin._server_started_this_session,
 		"prepare_for_update_reload must clear the re-entrancy guard before the toggle"
 	)
 
@@ -143,12 +143,12 @@ func test_exit_tree_is_idempotent_when_guard_already_false() -> void:
 	## If the plugin is disabled twice in a row (or disabled without ever
 	## having spawned), the second _exit_tree must still leave the flag
 	## false. Guards against accidental inversion of the reset.
-	GodotAiPlugin._server_started_this_session = false
-	var plugin := GodotAiPlugin.new()
+	RuntimeStudioPlugin._server_started_this_session = false
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._exit_tree()
 	plugin.free()
 	assert_true(
-		not GodotAiPlugin._server_started_this_session,
+		not RuntimeStudioPlugin._server_started_this_session,
 		"_exit_tree must not flip the guard back to true"
 	)
 
@@ -159,7 +159,7 @@ func test_finalize_stop_clears_state_when_port_is_free() -> void:
 	## the pid-file. Standard happy path.
 	_seed_managed_record(12345, "1.2.9")
 	_seed_pid_file(12345)
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 
 	var cleared := plugin._finalize_stop_if_port_free(TEST_PORT)
 	plugin.free()
@@ -171,7 +171,7 @@ func test_finalize_stop_clears_state_when_port_is_free() -> void:
 		"managed-server record must be cleared when port is free"
 	)
 	assert_true(
-		not FileAccess.file_exists(GodotAiPlugin.SERVER_PID_FILE),
+		not FileAccess.file_exists(RuntimeStudioPlugin.SERVER_PID_FILE),
 		"pid-file must be cleared when port is free"
 	)
 
@@ -190,7 +190,7 @@ func test_finalize_stop_preserves_state_when_port_still_in_use() -> void:
 
 	_seed_managed_record(54321, "1.2.9")
 	_seed_pid_file(54321)
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 
 	var cleared := plugin._finalize_stop_if_port_free(TEST_PORT)
 	plugin.free()
@@ -203,15 +203,15 @@ func test_finalize_stop_preserves_state_when_port_still_in_use() -> void:
 		"managed-server record must be preserved so drift branch can retry the kill"
 	)
 	assert_true(
-		FileAccess.file_exists(GodotAiPlugin.SERVER_PID_FILE),
+		FileAccess.file_exists(RuntimeStudioPlugin.SERVER_PID_FILE),
 		"pid-file must be preserved so next _find_managed_pid has the deterministic hint"
 	)
 
 
-func test_stop_dev_server_only_kills_godot_ai_listeners() -> void:
+func test_stop_dev_server_only_kills_runtime_studio_listeners() -> void:
 	## `stop_dev_server` used to shell out to `lsof | xargs kill`, which
 	## swept unrelated listeners that happened to share the configured HTTP
-	## port. It must filter by the same godot-ai command-line proof used by
+	## port. It must filter by the same runtime-studio-godot command-line proof used by
 	## the managed lifecycle stop path.
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [11111, 22222] as Array[int]
@@ -236,7 +236,7 @@ func test_stop_dev_server_only_kills_godot_ai_listeners() -> void:
 
 
 func test_spawn_state_defaults_to_uninitialized() -> void:
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var status := plugin.get_server_status()
 	plugin.free()
 	assert_eq(
@@ -247,7 +247,7 @@ func test_spawn_state_defaults_to_uninitialized() -> void:
 
 
 func test_set_spawn_state_records_first_diagnosis() -> void:
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._set_spawn_state(McpServerState.FOREIGN_PORT)
 	var status := plugin.get_server_status()
 	plugin.free()
@@ -260,7 +260,7 @@ func test_set_spawn_state_does_not_overwrite_specific_diagnosis() -> void:
 	## PORT_EXCLUDED from the proactive `netsh` check — the CRASHED code
 	## would overwrite it with a less actionable state. `_set_spawn_state`
 	## is first-writer-wins so the dock keeps showing the pointed message.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._set_spawn_state(McpServerState.PORT_EXCLUDED)
 	plugin._set_spawn_state(McpServerState.CRASHED)
 	var status := plugin.get_server_status()
@@ -275,7 +275,7 @@ func test_set_spawn_state_does_not_overwrite_specific_diagnosis() -> void:
 func test_get_server_status_shape_is_stable() -> void:
 	## Dock reads these keys; missing any is a render bug. Locked so a
 	## future refactor of the plugin-side dict can't silently drop one.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var status := plugin.get_server_status()
 	plugin.free()
 	assert_has_key(status, "state")
@@ -289,8 +289,8 @@ func test_get_server_status_shape_is_stable() -> void:
 
 
 func test_server_status_compatibility_requires_matching_ws_port() -> void:
-	var ok := GodotAiPlugin._server_status_compatibility("2.2.0", "2.2.0", 9500, 9500)
-	var wrong_ws := GodotAiPlugin._server_status_compatibility("2.2.0", "2.2.0", 9600, 9500)
+	var ok := RuntimeStudioPlugin._server_status_compatibility("2.2.0", "2.2.0", 9500, 9500)
+	var wrong_ws := RuntimeStudioPlugin._server_status_compatibility("2.2.0", "2.2.0", 9600, 9500)
 	assert_true(bool(ok.get("compatible", false)), "matching version + WS port must be compatible")
 	assert_false(
 		bool(wrong_ws.get("compatible", true)),
@@ -301,62 +301,62 @@ func test_server_status_compatibility_requires_matching_ws_port() -> void:
 
 func test_managed_record_restart_requires_recorded_version_drift() -> void:
 	assert_true(
-		GodotAiPlugin._managed_record_has_version_drift("2.1.0", "2.2.0"),
+		RuntimeStudioPlugin._managed_record_has_version_drift("2.1.0", "2.2.0"),
 		"older managed record must still authorize update restart"
 	)
 	assert_false(
-		GodotAiPlugin._managed_record_has_version_drift("2.2.0", "2.2.0"),
+		RuntimeStudioPlugin._managed_record_has_version_drift("2.2.0", "2.2.0"),
 		"matching managed record must not authorize killing an unverified port owner"
 	)
 	assert_false(
-		GodotAiPlugin._managed_record_has_version_drift("", "2.2.0"),
+		RuntimeStudioPlugin._managed_record_has_version_drift("", "2.2.0"),
 		"missing managed record must not authorize restart"
 	)
 
 
 func test_commandline_fingerprint_is_case_insensitive_and_requires_flag() -> void:
 	assert_true(
-		GodotAiPlugin._commandline_is_godot_ai_server(
-			"C:/Python/python.exe -m GODOT_AI --TRANSPORT streamable-http"
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server(
+			"C:/Python/python.exe -m RUNTIME_STUDIO --TRANSPORT streamable-http"
 		),
 		"brand and management flag should match case-insensitively"
 	)
 	assert_true(
-		GodotAiPlugin._commandline_is_godot_ai_server(
-			"C:/Python/python.exe -m godot-ai --pid-file C:/tmp/godot_ai_server.pid"
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server(
+			"C:/Python/python.exe -m runtime-studio-godot --pid-file C:/tmp/runtime_studio_server.pid"
 		),
 		"hyphenated brand plus pid-file flag should identify the server"
 	)
 	assert_false(
-		GodotAiPlugin._commandline_is_godot_ai_server("C:/Python/python.exe -m godot_ai"),
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server("C:/Python/python.exe -m runtime_studio"),
 		"brand alone is not enough ownership proof"
 	)
 	assert_false(
-		GodotAiPlugin._commandline_is_godot_ai_server(""),
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server(""),
 		"empty cmdline (lookup failure) must never be accepted as proof"
 	)
 
 
 func test_commandline_fingerprint_ignores_brand_in_pidfile_path() -> void:
-	## Regression: the pidfile path itself is `<user>/godot_ai_server.pid`,
+	## Regression: the pidfile path itself is `<user>/runtime_studio_server.pid`,
 	## so a substring brand search would falsely match an unrelated process
 	## that happens to reference a similarly-named pidfile. The brand must
 	## come from somewhere outside the --pid-file value.
 	assert_false(
-		GodotAiPlugin._commandline_is_godot_ai_server(
-			"someprogram --pid-file /var/run/godot_ai_server.pid --transport tcp"
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server(
+			"someprogram --pid-file /var/run/runtime_studio_server.pid --transport tcp"
 		),
 		"brand in pidfile path alone must not satisfy ownership proof"
 	)
 	assert_false(
-		GodotAiPlugin._commandline_is_godot_ai_server(
-			"someprogram --pid-file=/var/run/godot_ai_server.pid --transport tcp"
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server(
+			"someprogram --pid-file=/var/run/runtime_studio_server.pid --transport tcp"
 		),
 		"--pid-file=<value> form must also strip the path before brand search"
 	)
 	assert_true(
-		GodotAiPlugin._commandline_is_godot_ai_server(
-			"/usr/bin/python -m godot_ai --transport streamable-http --pid-file /tmp/godot_ai_server.pid"
+		RuntimeStudioPlugin._commandline_is_runtime_studio_server(
+			"/usr/bin/python -m runtime_studio --transport streamable-http --pid-file /tmp/runtime_studio_server.pid"
 		),
 		"real server invocation has brand outside the pidfile value, must still match"
 	)
@@ -365,17 +365,17 @@ func test_commandline_fingerprint_ignores_brand_in_pidfile_path() -> void:
 func test_strip_pidfile_value_handles_space_and_equals_forms() -> void:
 	## Whitespace form: keep the bare flag, drop the value.
 	assert_eq(
-		GodotAiPlugin._strip_pidfile_value("foo --pid-file /tmp/x.pid bar"),
+		RuntimeStudioPlugin._strip_pidfile_value("foo --pid-file /tmp/x.pid bar"),
 		"foo --pid-file  bar"
 	)
 	## Equals form: same outcome.
 	assert_eq(
-		GodotAiPlugin._strip_pidfile_value("foo --pid-file=/tmp/x.pid bar"),
+		RuntimeStudioPlugin._strip_pidfile_value("foo --pid-file=/tmp/x.pid bar"),
 		"foo --pid-file  bar"
 	)
 	## No --pid-file flag: returned unchanged.
 	assert_eq(
-		GodotAiPlugin._strip_pidfile_value("foo --transport tcp"),
+		RuntimeStudioPlugin._strip_pidfile_value("foo --transport tcp"),
 		"foo --transport tcp"
 	)
 
@@ -384,9 +384,9 @@ func test_pid_cmdline_rejects_sentinel_pids() -> void:
 	## Init/PID 1 and pid 0 must never be considered candidates for kill.
 	## A stale pidfile that somehow contains 0 or 1 has to bail before any
 	## OS lookup, otherwise we'd risk targeting init on POSIX.
-	var plugin := GodotAiPlugin.new()
-	assert_false(plugin._pid_cmdline_is_godot_ai(0), "pid 0 must never match")
-	assert_false(plugin._pid_cmdline_is_godot_ai(1), "pid 1 (init) must never match")
+	var plugin := RuntimeStudioPlugin.new()
+	assert_false(plugin._pid_cmdline_is_runtime_studio(0), "pid 0 must never match")
+	assert_false(plugin._pid_cmdline_is_runtime_studio(1), "pid 1 (init) must never match")
 	plugin.free()
 
 
@@ -399,7 +399,7 @@ func test_posix_pid_commandline_reads_procfs_despite_zero_length() -> void:
 	if not FileAccess.file_exists("/proc/self/cmdline"):
 		skip("/proc not available — Linux-only test")
 		return
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var cmd := plugin._posix_pid_commandline(OS.get_process_id())
 	plugin.free()
 	assert_false(
@@ -425,18 +425,18 @@ func test_pid_cmdline_rejects_unrelated_local_pid() -> void:
 	if OS.get_name() == "Windows":
 		skip("POSIX-only path: Windows uses PowerShell, exercised elsewhere")
 		return
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var godot_pid := OS.get_process_id()
-	var matches := plugin._pid_cmdline_is_godot_ai(godot_pid)
+	var matches := plugin._pid_cmdline_is_runtime_studio(godot_pid)
 	plugin.free()
 	assert_false(
 		matches,
-		"editor PID's cmdline lacks --pid-file/--transport, must not match godot-ai server fingerprint"
+		"editor PID's cmdline lacks --pid-file/--transport, must not match runtime-studio-godot server fingerprint"
 	)
 
 
-class _RealCmdlinePlugin extends GodotAiPlugin:
-	## Exercises the real `_pid_cmdline_is_godot_ai` inside the kill-target
+class _RealCmdlinePlugin extends RuntimeStudioPlugin:
+	## Exercises the real `_pid_cmdline_is_runtime_studio` inside the kill-target
 	## path. Mocks the pidfile / liveness lookups but lets the cmdline
 	## fingerprint flow through to the OS-specific reader (`/proc` on Linux,
 	## `ps` on macOS/*BSD, PowerShell on Windows). Regression coverage for
@@ -564,7 +564,7 @@ func test_strong_proof_accepts_status_matching_managed_record_version() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
 	plugin.managed_record = {"pid": 0, "version": "2.1.0", "ws_port": 9500}
-	plugin.live_status = {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var proof := plugin._evaluate_strong_port_occupant_proof(TEST_PORT)
 	plugin.free()
@@ -579,7 +579,7 @@ func test_strong_proof_rejects_status_name_only() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
 	plugin.managed_record = {"pid": 0, "version": "", "ws_port": 0}
-	plugin.live_status = {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var proof := plugin._evaluate_strong_port_occupant_proof(TEST_PORT)
 	plugin.free()
@@ -593,7 +593,7 @@ func test_strong_proof_rejects_status_name_only() -> void:
 func test_recovery_proof_accepts_status_name_only() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
-	plugin.live_status = {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var proof := plugin._evaluate_recovery_port_occupant_proof(TEST_PORT)
 	plugin.free()
@@ -647,7 +647,7 @@ func test_strong_recovery_preserves_state_when_port_stays_held() -> void:
 func test_strong_recovery_rejects_status_name_only() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
-	plugin.live_status = {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var ok := plugin._recover_strong_port_occupant(TEST_PORT, 0.1)
 	var killed := plugin.killed_targets.duplicate()
@@ -665,7 +665,7 @@ func test_can_recover_incompatible_server_requires_state_and_recovery_proof() ->
 	var plugin := _ProofPlugin.new()
 	plugin.port_in_use = true
 	plugin.listener_pids = [13579] as Array[int]
-	plugin.live_status = {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	assert_false(plugin.can_recover_incompatible_server(), "OK state must not expose recovery")
 	plugin._lifecycle._server_state = McpServerState.INCOMPATIBLE
@@ -681,7 +681,7 @@ func test_external_compatible_adoption_clears_stale_managed_record() -> void:
 	## process.
 	_seed_managed_record(11111, "2.1.0")
 	_seed_pid_file(11111)
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 
 	var owner_label := plugin._adopt_compatible_server("2.1.0", "2.2.0", 22222)
 	var can_restart := plugin.can_restart_managed_server()
@@ -692,14 +692,14 @@ func test_external_compatible_adoption_clears_stale_managed_record() -> void:
 	assert_eq(server_pid, -1, "external adoption must not keep a managed PID")
 	assert_eq(_read_record_version(), "", "stale managed record must be cleared")
 	assert_false(
-		FileAccess.file_exists(GodotAiPlugin.SERVER_PID_FILE),
+		FileAccess.file_exists(RuntimeStudioPlugin.SERVER_PID_FILE),
 		"stale pid-file must be cleared with the stale record"
 	)
 	assert_false(can_restart, "external adoption must not authorize managed restart")
 
 
 func test_external_compatible_adoption_log_reports_observed_owner() -> void:
-	var message := GodotAiPlugin._compatible_adoption_log_message(
+	var message := RuntimeStudioPlugin._compatible_adoption_log_message(
 		"external",
 		-1,
 		22222,
@@ -715,7 +715,7 @@ func test_external_compatible_adoption_log_reports_observed_owner() -> void:
 
 
 func test_managed_compatible_adoption_log_reports_owned_pid() -> void:
-	var message := GodotAiPlugin._compatible_adoption_log_message(
+	var message := RuntimeStudioPlugin._compatible_adoption_log_message(
 		"managed",
 		22222,
 		22222,
@@ -749,12 +749,12 @@ func test_resolved_ws_port_drops_stale_record_value() -> void:
 	## tested below by composing this helper with `_adopt_compatible_server`.
 	var stale_record_ws := 9500
 	var fresh_resolved := 10500
-	var stale := GodotAiPlugin._resolved_ws_port_for_existing_server(
+	var stale := RuntimeStudioPlugin._resolved_ws_port_for_existing_server(
 		stale_record_ws, "2.1.0", "2.2.0", fresh_resolved
 	)
 	assert_eq(stale, fresh_resolved, "stale record version must drop the cached ws_port")
 
-	var matching := GodotAiPlugin._resolved_ws_port_for_existing_server(
+	var matching := RuntimeStudioPlugin._resolved_ws_port_for_existing_server(
 		stale_record_ws, "2.2.0", "2.2.0", fresh_resolved
 	)
 	assert_eq(
@@ -763,12 +763,12 @@ func test_resolved_ws_port_drops_stale_record_value() -> void:
 		"matching record version is current ownership proof — keep the cached ws_port"
 	)
 
-	var missing := GodotAiPlugin._resolved_ws_port_for_existing_server(
+	var missing := RuntimeStudioPlugin._resolved_ws_port_for_existing_server(
 		0, "2.2.0", "2.2.0", fresh_resolved
 	)
 	assert_eq(missing, fresh_resolved, "no cached ws_port -> use fresh-resolved")
 
-	var no_record := GodotAiPlugin._resolved_ws_port_for_existing_server(
+	var no_record := RuntimeStudioPlugin._resolved_ws_port_for_existing_server(
 		stale_record_ws, "", "2.2.0", fresh_resolved
 	)
 	assert_eq(no_record, fresh_resolved, "empty record version is not ownership proof")
@@ -776,7 +776,7 @@ func test_resolved_ws_port_drops_stale_record_value() -> void:
 	## Defensive: an empty `current_version` (handler not initialised yet)
 	## must not collapse to `record_version == current_version == ""` and
 	## start treating any record as ownership proof.
-	var empty_current := GodotAiPlugin._resolved_ws_port_for_existing_server(
+	var empty_current := RuntimeStudioPlugin._resolved_ws_port_for_existing_server(
 		stale_record_ws, "", "", fresh_resolved
 	)
 	assert_eq(empty_current, fresh_resolved, "empty current version cannot be ownership proof")
@@ -800,14 +800,14 @@ func test_stale_ws_port_does_not_authorize_killing_external_server() -> void:
 
 	## Step 1: WS-port resolver must drop the stale cached value, otherwise
 	## the compatibility check below would falsely report ws_port_mismatch.
-	var resolved := GodotAiPlugin._resolved_ws_port_for_existing_server(
+	var resolved := RuntimeStudioPlugin._resolved_ws_port_for_existing_server(
 		STALE_RECORD_WS, STALE, CURRENT, LIVE_CURRENT_WS
 	)
 	assert_eq(resolved, LIVE_CURRENT_WS, "stale ws_port must be ignored before the compatibility probe")
 
 	## Step 2: with the freshly-resolved expected port, a live current
 	## server passes compatibility — the precondition for adoption.
-	var compatibility := GodotAiPlugin._server_status_compatibility(
+	var compatibility := RuntimeStudioPlugin._server_status_compatibility(
 		CURRENT, CURRENT, LIVE_CURRENT_WS, resolved
 	)
 	assert_true(
@@ -818,7 +818,7 @@ func test_stale_ws_port_does_not_authorize_killing_external_server() -> void:
 	## Step 3: adoption with a stale record version routes through the
 	## external path and clears the stale record — same contract #259
 	## locked in for PID + version, now extended to ws_port.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var owner_label := plugin._adopt_compatible_server(STALE, CURRENT, 22222)
 	var server_pid: int = int(plugin._lifecycle._server_pid)
 	var can_restart := plugin.can_restart_managed_server()
@@ -832,7 +832,7 @@ func test_stale_ws_port_does_not_authorize_killing_external_server() -> void:
 
 func test_matching_compatible_adoption_keeps_managed_ownership() -> void:
 	_seed_managed_record(11111, "2.2.0")
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 
 	var owner_label := plugin._adopt_compatible_server("2.2.0", "2.2.0", 22222)
 	var can_restart := plugin.can_restart_managed_server()
@@ -846,9 +846,9 @@ func test_matching_compatible_adoption_keeps_managed_ownership() -> void:
 
 
 func test_server_version_compatibility_requires_exact_match() -> void:
-	var exact := GodotAiPlugin._server_version_compatibility("2.2.0", "2.2.0")
-	var old := GodotAiPlugin._server_version_compatibility("1.2.10", "2.2.0")
-	var unknown := GodotAiPlugin._server_version_compatibility("", "2.2.0")
+	var exact := RuntimeStudioPlugin._server_version_compatibility("2.2.0", "2.2.0")
+	var old := RuntimeStudioPlugin._server_version_compatibility("1.2.10", "2.2.0")
+	var unknown := RuntimeStudioPlugin._server_version_compatibility("", "2.2.0")
 	assert_true(bool(exact.get("compatible", false)), "exact version must be compatible")
 	assert_false(bool(old.get("compatible", true)), "old server must be incompatible")
 	assert_false(bool(unknown.get("compatible", true)), "unknown live version must be incompatible")
@@ -861,7 +861,7 @@ func test_server_version_compatibility_rejects_dev_mismatch() -> void:
 	## dev-mode mismatch silently adopts a stale server (e.g. a sibling
 	## worktree's). Mismatch must route through `recover_strong_port_occupant`
 	## instead.
-	var result := GodotAiPlugin._server_version_compatibility("2.2.0-dev", "2.2.0")
+	var result := RuntimeStudioPlugin._server_version_compatibility("2.2.0-dev", "2.2.0")
 	assert_false(
 		bool(result.get("compatible", true)),
 		"dev-mode mismatch must be incompatible so startup can kill+respawn"
@@ -870,20 +870,20 @@ func test_server_version_compatibility_rejects_dev_mismatch() -> void:
 
 
 func test_incompatible_server_message_names_actual_version_when_discoverable() -> void:
-	var message := GodotAiPlugin._incompatible_server_message(
+	var message := RuntimeStudioPlugin._incompatible_server_message(
 		{"version": "1.2.10"},
 		"2.2.0",
 		8000,
 		McpClientConfigurator.ws_port(),
 	)
-	assert_contains(message, "Port 8000 is occupied by godot-ai server v1.2.10")
+	assert_contains(message, "Port 8000 is occupied by runtime-studio-godot server v1.2.10")
 	assert_contains(message, "plugin expects v2.2.0")
 	assert_contains(message, "change both HTTP and WS ports")
 
 
 func test_incompatible_server_message_names_ws_port_mismatch() -> void:
-	var message := GodotAiPlugin._incompatible_server_message(
-		{"name": "godot-ai", "version": "2.2.0", "ws_port": 9600},
+	var message := RuntimeStudioPlugin._incompatible_server_message(
+		{"name": "runtime-studio-godot", "version": "2.2.0", "ws_port": 9600},
 		"2.2.0",
 		8000,
 		McpClientConfigurator.ws_port(),
@@ -894,15 +894,15 @@ func test_incompatible_server_message_names_ws_port_mismatch() -> void:
 
 
 func test_incompatible_server_message_surfaces_package_path_when_present() -> void:
-	## v2.4.4+ /godot-ai/status carries `package_path` (issue #416). When
+	## v2.4.4+ /runtime-studio-godot/status carries `package_path` (issue #416). When
 	## the live snapshot includes it, the dock's banner must name the
 	## loaded path so the user can identify a worktree-vs-root version
 	## skew without walking the process tree.
-	var message := GodotAiPlugin._incompatible_server_message(
+	var message := RuntimeStudioPlugin._incompatible_server_message(
 		{
-			"name": "godot-ai",
+			"name": "runtime-studio-godot",
 			"version": "1.4.4",
-			"package_path": "/Users/foo/godot-ai-branch/src/godot_ai",
+			"package_path": "/Users/foo/runtime-studio-godot-branch/src/runtime_studio",
 		},
 		"2.4.4",
 		18130,
@@ -911,7 +911,7 @@ func test_incompatible_server_message_surfaces_package_path_when_present() -> vo
 	assert_contains(message, "v1.4.4")
 	assert_contains(
 		message,
-		"(loaded from /Users/foo/godot-ai-branch/src/godot_ai)",
+		"(loaded from /Users/foo/runtime-studio-godot-branch/src/runtime_studio)",
 		"package_path must be surfaced verbatim so the user can match it to a worktree",
 	)
 	assert_contains(message, "plugin expects v2.4.4")
@@ -920,7 +920,7 @@ func test_incompatible_server_message_surfaces_package_path_when_present() -> vo
 func test_incompatible_server_message_omits_path_suffix_when_old_server() -> void:
 	## Old servers (pre-v2.4.4) omit `package_path`. The banner must
 	## degrade gracefully — no trailing "(loaded from )" stub.
-	var message := GodotAiPlugin._incompatible_server_message(
+	var message := RuntimeStudioPlugin._incompatible_server_message(
 		{"version": "1.2.10"},
 		"2.2.0",
 		8000,
@@ -932,11 +932,11 @@ func test_incompatible_server_message_omits_path_suffix_when_old_server() -> voi
 	)
 
 
-func test_incompatible_server_message_ignores_package_path_for_non_godot_ai_peer() -> void:
-	## A non-godot-ai server on the port could in theory return a JSON
-	## `package_path` field. Don't label it as "godot-ai loaded from …" —
-	## the surface is for godot-ai version skew, not for misattribution.
-	var message := GodotAiPlugin._incompatible_server_message(
+func test_incompatible_server_message_ignores_package_path_for_non_runtime_studio_peer() -> void:
+	## A non-runtime-studio-godot server on the port could in theory return a JSON
+	## `package_path` field. Don't label it as "runtime-studio-godot loaded from …" —
+	## the surface is for runtime-studio-godot version skew, not for misattribution.
+	var message := RuntimeStudioPlugin._incompatible_server_message(
 		{"name": "other-server", "version": "9.9.9", "package_path": "/somewhere/else"},
 		"2.4.4",
 		8000,
@@ -961,12 +961,12 @@ func test_incompatible_transition_refreshes_dock_client_statuses() -> void:
 func test_incompatible_status_exposes_actual_name_and_recovery_flag() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [24680] as Array[int]
-	plugin.live_status = {"name": "godot-ai", "version": "1.2.10", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "1.2.10", "ws_port": 9500, "status_code": 200}
 	plugin._set_incompatible_server(plugin.live_status, "2.2.0", TEST_PORT)
 	var status := plugin.get_server_status()
 	plugin.free()
 
-	assert_eq(status.get("actual_name", ""), "godot-ai")
+	assert_eq(status.get("actual_name", ""), "runtime-studio-godot")
 	assert_true(bool(status.get("can_recover_incompatible", false)))
 
 
@@ -1035,7 +1035,7 @@ func test_recover_incompatible_returns_false_and_leaves_state_when_port_remains_
 	plugin._lifecycle._connection_blocked = true
 	plugin.port_in_use = true
 	plugin.listener_pids = [24680] as Array[int]
-	plugin.live_status = {"name": "godot-ai", "version": "1.2.10", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "1.2.10", "ws_port": 9500, "status_code": 200}
 
 	var ok := plugin.recover_incompatible_server()
 	var status := plugin.get_server_status()
@@ -1055,7 +1055,7 @@ func test_recovery_resume_unblocks_connection_while_spawn_is_in_flight() -> void
 	## server, leaving lifecycle state at SPAWNING until the WebSocket
 	## handshake verifies the version. The connection must be unblocked
 	## during SPAWNING, otherwise the dock sits forever at "Restarting".
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var conn := McpConnection.new()
 	conn.connect_blocked = true
 	conn.connect_block_reason = "incompatible"
@@ -1084,7 +1084,7 @@ func test_connection_established_waits_for_version_before_clearing_foreign_port(
 	## HTTP/MCP tool surface. FOREIGN_PORT only clears after the live server
 	## version is verified.
 	_seed_managed_record(99999, "other-version")
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._set_spawn_state(McpServerState.FOREIGN_PORT)
 	assert_eq(
 		plugin.get_server_status().get("state", ""),
@@ -1106,7 +1106,7 @@ func test_connection_established_waits_for_version_before_clearing_foreign_port(
 
 
 func test_verified_matching_server_clears_foreign_port() -> void:
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var plugin_ver := McpClientConfigurator.get_plugin_version()
 	plugin._lifecycle._server_expected_version = plugin_ver
 	plugin._set_spawn_state(McpServerState.FOREIGN_PORT)
@@ -1129,12 +1129,12 @@ func test_verified_old_server_becomes_incompatible_and_blocks_connection() -> vo
 	var es := EditorInterface.get_editor_settings()
 	if es != null and es.has_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING):
 		prior_setting = es.get_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING)
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
 	if es != null:
 		es.set_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING, "user")
-	OS.set_environment("GODOT_AI_MODE", "user")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "user")
 
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._lifecycle._server_expected_version = "2.2.0"
 	plugin._on_server_version_verified("1.2.10")
 	var status := plugin.get_server_status()
@@ -1143,16 +1143,16 @@ func test_verified_old_server_becomes_incompatible_and_blocks_connection() -> vo
 	if es != null:
 		es.set_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING, prior_setting if prior_setting != null else "")
 	if prior_env.is_empty():
-		OS.unset_environment("GODOT_AI_MODE")
+		OS.unset_environment("RUNTIME_STUDIO_MODE")
 	else:
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 
 	assert_eq(int(status.get("state", -1)), McpServerState.INCOMPATIBLE)
 	assert_eq(status.get("actual_version", ""), "1.2.10")
 	assert_true(bool(status.get("connection_blocked", false)))
 	assert_contains(
 		str(status.get("message", "")),
-		"Port %d is occupied by godot-ai server v1.2.10; plugin expects v2.2.0"
+		"Port %d is occupied by runtime-studio-godot server v1.2.10; plugin expects v2.2.0"
 			% McpClientConfigurator.http_port(),
 	)
 
@@ -1164,7 +1164,7 @@ func test_connection_established_preserves_crashed_state() -> void:
 	## WebSocket can open and `_on_connection_established` should never
 	## fire in those states in the real flow. But if it ever does, don't
 	## paper over a real failure.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._set_spawn_state(McpServerState.CRASHED)
 	plugin._on_connection_established()
 	var state: int = int(plugin.get_server_status().get("state", -1))
@@ -1184,7 +1184,7 @@ func test_watch_for_adoption_confirmation_arms_bounded_deadline() -> void:
 	## deadline SPAWN_GRACE_MS in the future. `_process` self-disarms on
 	## first successful connect OR on deadline expiry, whichever comes
 	## first. This test just pins the deadline-arming half of the contract.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	assert_eq(plugin._lifecycle._adoption_watch_deadline_ms, 0, "precondition: deadline disarmed")
 	var before_ms := Time.get_ticks_msec()
 	plugin._watch_for_adoption_confirmation()
@@ -1194,8 +1194,8 @@ func test_watch_for_adoption_confirmation_arms_bounded_deadline() -> void:
 	## Lower bound: SPAWN_GRACE_MS minus a generous 100ms slack for any
 	## scheduler jitter between `before_ms` and the latching call.
 	assert_true(
-		deadline - before_ms >= GodotAiPlugin.SPAWN_GRACE_MS - 100,
-		"deadline must be ~SPAWN_GRACE_MS (%dms) into the future" % GodotAiPlugin.SPAWN_GRACE_MS
+		deadline - before_ms >= RuntimeStudioPlugin.SPAWN_GRACE_MS - 100,
+		"deadline must be ~SPAWN_GRACE_MS (%dms) into the future" % RuntimeStudioPlugin.SPAWN_GRACE_MS
 	)
 
 
@@ -1204,7 +1204,7 @@ func test_process_clears_foreign_port_after_matching_version_ack() -> void:
 	## `_watch_for_adoption_confirmation` arms the deadline + `_process`,
 	## then `_process` waits for McpConnection.server_version. Mere connection
 	## is insufficient; a matching ack is what authorizes adoption.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var conn := McpConnection.new()
 	plugin._connection = conn
 	plugin._lifecycle._server_expected_version = McpClientConfigurator.get_plugin_version()
@@ -1230,7 +1230,7 @@ func test_process_self_disarms_after_deadline_without_connect() -> void:
 	## genuine non-MCP process), the watcher must give up after
 	## SPAWN_GRACE_MS so `_process` stops running every frame. The deadline
 	## stays zero afterwards, serving as the "disarmed" sentinel.
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	var conn := McpConnection.new()
 	plugin._connection = conn
 	plugin._set_spawn_state(McpServerState.FOREIGN_PORT)
@@ -1256,7 +1256,7 @@ func test_process_self_disarms_after_deadline_without_connect() -> void:
 
 
 func test_parse_lsof_pids_single_line() -> void:
-	var pids := GodotAiPlugin._parse_lsof_pids("32696")
+	var pids := RuntimeStudioPlugin._parse_lsof_pids("32696")
 	assert_eq(pids.size(), 1)
 	assert_eq(pids[0], 32696)
 
@@ -1265,7 +1265,7 @@ func test_parse_lsof_pids_multi_line() -> void:
 	## The regression: uvicorn --reload binds both a reloader parent and
 	## a worker to port 8000. lsof -ti returns them newline-separated.
 	## Parser must yield both so `force_restart_server` can kill both.
-	var pids := GodotAiPlugin._parse_lsof_pids("32696\n39824")
+	var pids := RuntimeStudioPlugin._parse_lsof_pids("32696\n39824")
 	assert_eq(pids.size(), 2)
 	assert_eq(pids[0], 32696)
 	assert_eq(pids[1], 39824)
@@ -1275,12 +1275,12 @@ func test_parse_lsof_pids_trailing_newline() -> void:
 	## lsof output typically ends in \n; `split("\n", false)` drops the
 	## empty trailing segment, but we also guard via `is_valid_int` so
 	## any stray whitespace doesn't slip through as a fake pid.
-	var pids := GodotAiPlugin._parse_lsof_pids("32696\n39824\n")
+	var pids := RuntimeStudioPlugin._parse_lsof_pids("32696\n39824\n")
 	assert_eq(pids.size(), 2)
 
 
 func test_parse_lsof_pids_empty_input() -> void:
-	var pids := GodotAiPlugin._parse_lsof_pids("")
+	var pids := RuntimeStudioPlugin._parse_lsof_pids("")
 	assert_eq(pids.size(), 0)
 
 
@@ -1288,7 +1288,7 @@ func test_parse_lsof_pids_ignores_non_numeric_lines() -> void:
 	## Defensive against lsof emitting a warning header on stderr that
 	## bleeds into stdout under rare conditions — the parser must drop
 	## non-numeric lines rather than returning a bogus pid.
-	var pids := GodotAiPlugin._parse_lsof_pids("lsof: WARNING\n32696\n")
+	var pids := RuntimeStudioPlugin._parse_lsof_pids("lsof: WARNING\n32696\n")
 	assert_eq(pids.size(), 1)
 	assert_eq(pids[0], 32696)
 
@@ -1330,7 +1330,7 @@ func test_strong_proof_uses_provided_live_without_probing() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
 	plugin.managed_record = {"pid": 0, "version": "2.1.0", "ws_port": 9500}
-	var caller_live := {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	var caller_live := {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var proof := plugin._evaluate_strong_port_occupant_proof(TEST_PORT, caller_live)
 	var probe_calls := plugin.probe_calls
@@ -1344,7 +1344,7 @@ func test_strong_proof_probes_when_live_omitted() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
 	plugin.managed_record = {"pid": 0, "version": "2.1.0", "ws_port": 9500}
-	plugin.live_status = {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	plugin.live_status = {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var proof := plugin._evaluate_strong_port_occupant_proof(TEST_PORT)
 	var probe_calls := plugin.probe_calls
@@ -1362,7 +1362,7 @@ func test_recovery_proof_threads_live_through_strong_call() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
 	plugin.managed_record = {"pid": 0, "version": "", "ws_port": 0}
-	var caller_live := {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	var caller_live := {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var proof := plugin._evaluate_recovery_port_occupant_proof(TEST_PORT, caller_live)
 	var probe_calls := plugin.probe_calls
@@ -1382,7 +1382,7 @@ func test_recover_strong_port_occupant_threads_live_to_proof() -> void:
 	plugin.managed_record = {"pid": 13579, "version": "2.1.0", "ws_port": 9500}
 	plugin.alive_pids = [13579] as Array[int]
 	plugin.port_in_use_sequence = [false] as Array[bool]
-	var caller_live := {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	var caller_live := {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	var ok := plugin._recover_strong_port_occupant(TEST_PORT, 0.1, caller_live)
 	var probe_calls := plugin.probe_calls
@@ -1399,7 +1399,7 @@ func test_set_incompatible_server_threads_live_to_recovery_proof() -> void:
 	var plugin := _ProofPlugin.new()
 	plugin.listener_pids = [13579] as Array[int]
 	plugin.managed_record = {"pid": 0, "version": "", "ws_port": 0}
-	var caller_live := {"name": "godot-ai", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
+	var caller_live := {"name": "runtime-studio-godot", "version": "2.1.0", "ws_port": 9500, "status_code": 200}
 
 	plugin._set_incompatible_server(caller_live, "2.3.1", TEST_PORT)
 	var probe_calls := plugin.probe_calls
@@ -1412,12 +1412,12 @@ func _seed_managed_record(pid: int, version: String) -> void:
 	var es := EditorInterface.get_editor_settings()
 	if es == null:
 		return
-	es.set_setting(GodotAiPlugin.MANAGED_SERVER_PID_SETTING, pid)
-	es.set_setting(GodotAiPlugin.MANAGED_SERVER_VERSION_SETTING, version)
+	es.set_setting(RuntimeStudioPlugin.MANAGED_SERVER_PID_SETTING, pid)
+	es.set_setting(RuntimeStudioPlugin.MANAGED_SERVER_VERSION_SETTING, version)
 
 
 func _seed_pid_file(pid: int) -> void:
-	var f := FileAccess.open(GodotAiPlugin.SERVER_PID_FILE, FileAccess.WRITE)
+	var f := FileAccess.open(RuntimeStudioPlugin.SERVER_PID_FILE, FileAccess.WRITE)
 	assert_true(f != null, "test setup: must be able to write pid-file")
 	f.store_string(str(pid))
 	f.close()
@@ -1425,6 +1425,6 @@ func _seed_pid_file(pid: int) -> void:
 
 func _read_record_version() -> String:
 	var es := EditorInterface.get_editor_settings()
-	if es == null or not es.has_setting(GodotAiPlugin.MANAGED_SERVER_VERSION_SETTING):
+	if es == null or not es.has_setting(RuntimeStudioPlugin.MANAGED_SERVER_VERSION_SETTING):
 		return ""
-	return str(es.get_setting(GodotAiPlugin.MANAGED_SERVER_VERSION_SETTING))
+	return str(es.get_setting(RuntimeStudioPlugin.MANAGED_SERVER_VERSION_SETTING))

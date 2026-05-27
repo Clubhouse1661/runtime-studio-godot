@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 ## Disable telemetry by default for every pytest run, BEFORE any
-## ``godot_ai`` import. Workflow-level ``env:`` blocks only catch CI
+## ``runtime_studio`` import. Workflow-level ``env:`` blocks only catch CI
 ## branches that have adopted the gating; this conftest line also
 ## covers PRs that haven't merged the gating yet, contributors running
 ## the suite locally, and ad-hoc tox/uv invocations. Without it the
@@ -14,11 +14,11 @@ from __future__ import annotations
 ## ``setdefault`` preserves explicit overrides: tests that *want* the
 ## enabled code path (the telemetry fixtures in tests/unit/test_telemetry*.py)
 ## ``monkeypatch.delenv`` this var inside their fixture, and any caller
-## can pass ``GODOT_AI_DISABLE_TELEMETRY=false`` (or unset it) before
+## can pass ``RUNTIME_STUDIO_DISABLE_TELEMETRY=false`` (or unset it) before
 ## invoking pytest to bring the live path back.
 import os
 
-os.environ.setdefault("GODOT_AI_DISABLE_TELEMETRY", "true")
+os.environ.setdefault("RUNTIME_STUDIO_DISABLE_TELEMETRY", "true")
 
 import asyncio
 import json
@@ -27,8 +27,8 @@ from dataclasses import dataclass, field
 import pytest
 import websockets
 
-from godot_ai.sessions.registry import SessionRegistry
-from godot_ai.transport.websocket import GodotWebSocketServer
+from runtime_studio.sessions.registry import SessionRegistry
+from runtime_studio.transport.websocket import GodotWebSocketServer
 
 
 @dataclass
@@ -137,7 +137,7 @@ async def mcp_stack():
     """Full MCP server + mock Godot plugin connected via FastMCP Client."""
     from fastmcp import Client
 
-    from godot_ai.server import create_server
+    from runtime_studio.server import create_server
 
     port = 19502
     mcp = create_server(ws_port=port)

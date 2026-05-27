@@ -26,8 +26,8 @@ from typing import Any
 
 import pytest
 
-from godot_ai.server import create_server
-from godot_ai.tools._meta_tool import (
+from runtime_studio.server import create_server
+from runtime_studio.tools._meta_tool import (
     MANAGE_TOOL_HANDLERS,
     MANAGE_TOOL_OPS,
     MANAGE_TOOL_RESOURCE_FORMS,
@@ -146,7 +146,7 @@ async def test_meta_tool_read_ops_declare_resource_form(mcp):
         parts.append(
             "Read ops below declare resource URIs that are not registered "
             "(phantom URI). Either register the resource in "
-            "`src/godot_ai/resources/` or change the declaration to `None`.\n"
+            "`src/runtime_studio/resources/` or change the declaration to `None`.\n"
             "Available URIs:\n"
             + "\n".join(f"  {uri}" for uri in sorted(available_uris))
             + "\n\nDeclarations:\n"
@@ -163,13 +163,13 @@ async def test_meta_tool_read_ops_declare_resource_form(mcp):
 
 
 def test_detector_flags_handler_with_require_writable():
-    from godot_ai.handlers.animation import animation_player_create
+    from runtime_studio.handlers.animation import animation_player_create
 
     assert _handler_calls_require_writable(animation_player_create) is True
 
 
 def test_detector_does_not_flag_pure_read_handler():
-    from godot_ai.handlers.animation import animation_list
+    from runtime_studio.handlers.animation import animation_list
 
     assert _handler_calls_require_writable(animation_list) is False
 

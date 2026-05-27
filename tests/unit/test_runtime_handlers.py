@@ -6,36 +6,36 @@ import asyncio
 
 import pytest
 
-from godot_ai import runtime_info
-from godot_ai.handlers import animation as animation_handlers
-from godot_ai.handlers import audio as audio_handlers
-from godot_ai.handlers import autoload as autoload_handlers
-from godot_ai.handlers import batch as batch_handlers
-from godot_ai.handlers import camera as camera_handlers
-from godot_ai.handlers import client as client_handlers
-from godot_ai.handlers import control as control_handlers
-from godot_ai.handlers import curve as curve_handlers
-from godot_ai.handlers import editor as editor_handlers
-from godot_ai.handlers import environment as environment_handlers
-from godot_ai.handlers import filesystem as filesystem_handlers
-from godot_ai.handlers import game as game_handlers
-from godot_ai.handlers import input_map as input_map_handlers
-from godot_ai.handlers import material as material_handlers
-from godot_ai.handlers import node as node_handlers
-from godot_ai.handlers import particle as particle_handlers
-from godot_ai.handlers import physics_shape as physics_shape_handlers
-from godot_ai.handlers import project as project_handlers
-from godot_ai.handlers import resource as resource_handlers
-from godot_ai.handlers import scene as scene_handlers
-from godot_ai.handlers import script as script_handlers
-from godot_ai.handlers import session as session_handlers
-from godot_ai.handlers import signal as signal_handlers
-from godot_ai.handlers import testing as testing_handlers
-from godot_ai.handlers import texture as texture_handlers
-from godot_ai.handlers import theme as theme_handlers
-from godot_ai.handlers import ui as ui_handlers
-from godot_ai.runtime.direct import DirectRuntime
-from godot_ai.sessions.registry import Session, SessionRegistry
+from runtime_studio import runtime_info
+from runtime_studio.handlers import animation as animation_handlers
+from runtime_studio.handlers import audio as audio_handlers
+from runtime_studio.handlers import autoload as autoload_handlers
+from runtime_studio.handlers import batch as batch_handlers
+from runtime_studio.handlers import camera as camera_handlers
+from runtime_studio.handlers import client as client_handlers
+from runtime_studio.handlers import control as control_handlers
+from runtime_studio.handlers import curve as curve_handlers
+from runtime_studio.handlers import editor as editor_handlers
+from runtime_studio.handlers import environment as environment_handlers
+from runtime_studio.handlers import filesystem as filesystem_handlers
+from runtime_studio.handlers import game as game_handlers
+from runtime_studio.handlers import input_map as input_map_handlers
+from runtime_studio.handlers import material as material_handlers
+from runtime_studio.handlers import node as node_handlers
+from runtime_studio.handlers import particle as particle_handlers
+from runtime_studio.handlers import physics_shape as physics_shape_handlers
+from runtime_studio.handlers import project as project_handlers
+from runtime_studio.handlers import resource as resource_handlers
+from runtime_studio.handlers import scene as scene_handlers
+from runtime_studio.handlers import script as script_handlers
+from runtime_studio.handlers import session as session_handlers
+from runtime_studio.handlers import signal as signal_handlers
+from runtime_studio.handlers import testing as testing_handlers
+from runtime_studio.handlers import texture as texture_handlers
+from runtime_studio.handlers import theme as theme_handlers
+from runtime_studio.handlers import ui as ui_handlers
+from runtime_studio.runtime.direct import DirectRuntime
+from runtime_studio.sessions.registry import Session, SessionRegistry
 
 
 class StubClient:
@@ -2628,8 +2628,8 @@ async def test_curve_set_points_disk_handler():
 
 
 async def test_curve_set_points_requires_writable():
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -2677,8 +2677,8 @@ async def test_gradient_texture_create_inline_handler():
 
 
 async def test_gradient_texture_create_requires_writable():
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -2723,8 +2723,8 @@ async def test_noise_texture_create_handler():
 
 
 async def test_noise_texture_create_requires_writable():
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -2804,8 +2804,8 @@ async def test_environment_create_forwards_rich_sky_dict():
 
 
 async def test_environment_create_requires_writable():
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -2868,8 +2868,8 @@ async def test_physics_shape_autofit_passes_class_name_unchanged():
 
 
 async def test_physics_shape_autofit_requires_writable():
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -2889,8 +2889,8 @@ async def test_physics_shape_autofit_requires_writable():
 
 async def test_resource_create_requires_writable():
     """Write tools must raise EDITOR_NOT_READY when editor is importing."""
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -3487,7 +3487,7 @@ async def test_editor_screenshot_handler_relays_viewport_not_3d_error():
     LLM callers see the hint and can switch source or open a 3D scene.
     Fixes the 152-hit / 63-uuid INTERNAL_ERROR cluster on editor_screenshot.
     """
-    from godot_ai.godot_client.client import GodotCommandError
+    from runtime_studio.godot_client.client import GodotCommandError
 
     class ViewportNot3DClient:
         async def send(self, command, params=None, session_id=None, timeout=5.0):
@@ -3523,7 +3523,7 @@ async def test_editor_screenshot_handler_relays_viewport_empty_error():
     EDITOR_NOT_READY + data.editor_state=viewport_empty instead of
     INTERNAL_ERROR. Verify the data dict propagates through the handler.
     """
-    from godot_ai.godot_client.client import GodotCommandError
+    from runtime_studio.godot_client.client import GodotCommandError
 
     class ViewportEmptyClient:
         async def send(self, command, params=None, session_id=None, timeout=5.0):
@@ -4089,7 +4089,7 @@ async def test_animation_create_simple_passes_explicit_length():
 
 async def test_animation_list_does_not_require_writable():
     """animation_list is a read tool — it must not call require_writable."""
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     session = Session(
@@ -4109,7 +4109,7 @@ async def test_animation_list_does_not_require_writable():
 
 async def test_animation_play_does_not_require_writable():
     """animation_play is a preview op — it must not call require_writable."""
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     session = Session(
@@ -4127,7 +4127,7 @@ async def test_animation_play_does_not_require_writable():
 
 async def test_animation_stop_does_not_require_writable():
     """animation_stop is a preview op — it must not call require_writable."""
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     session = Session(
@@ -4145,8 +4145,8 @@ async def test_animation_stop_does_not_require_writable():
 
 async def test_animation_player_create_requires_writable():
     """Write tools must raise EDITOR_NOT_READY when editor is importing."""
-    from godot_ai.godot_client.client import GodotCommandError
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.godot_client.client import GodotCommandError
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     client.live_readiness = "importing"
@@ -4236,7 +4236,7 @@ async def test_animation_validate_handler():
 
 async def test_animation_validate_does_not_require_writable():
     """animation_validate is read-only — must not call require_writable."""
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     session = Session(
@@ -4273,7 +4273,7 @@ async def test_project_stop_handler_waits_for_readiness_change():
     import asyncio
     import time
 
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     registry = SessionRegistry()
@@ -4307,7 +4307,7 @@ async def test_project_stop_handler_times_out_if_readiness_stuck():
     """If readiness stays 'playing' (e.g. hung play process), handler returns after ~1s."""
     import time
 
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     client = StubClient()
     registry = SessionRegistry()
@@ -4332,7 +4332,7 @@ async def test_project_stop_handler_times_out_if_readiness_stuck():
 def _make_stop_project_runtime(
     readiness_after: str, session_id: str
 ) -> tuple[DirectRuntime, "Session"]:
-    from godot_ai.sessions.registry import Session
+    from runtime_studio.sessions.registry import Session
 
     class ReadinessAfterStub(StubClient):
         async def send(self, command, params=None, session_id=None, timeout=5.0):
@@ -4980,7 +4980,7 @@ async def test_audio_list_handler_is_read_only():
 
 async def test_audio_player_create_blocks_when_not_writable():
     """audio_player_create requires a writable session (uses require_writable)."""
-    from godot_ai.godot_client.client import GodotCommandError
+    from runtime_studio.godot_client.client import GodotCommandError
 
     client = StubClient()
     client.live_readiness = "playing"

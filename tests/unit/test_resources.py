@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from godot_ai.resources.project import COMMON_SETTINGS
-from godot_ai.server import create_server
+from runtime_studio.resources.project import COMMON_SETTINGS
+from runtime_studio.server import create_server
 
 
 @pytest.fixture

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const PhysicsShapeHandler := preload("res://addons/godot_ai/handlers/physics_shape_handler.gd")
+const PhysicsShapeHandler := preload("res://addons/runtime_studio/handlers/physics_shape_handler.gd")
 
 ## Tests for PhysicsShapeHandler — autofit CollisionShape* to sibling bounds.
 

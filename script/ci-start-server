@@ -9,7 +9,7 @@ PYTHON_CMD="${1:-python}"
 PORT=8000
 SERVER_URL="http://127.0.0.1:$PORT/mcp"
 
-$PYTHON_CMD -m godot_ai --transport streamable-http --port $PORT &
+$PYTHON_CMD -m runtime_studio --transport streamable-http --port $PORT &
 
 for i in $(seq 1 30); do
   if curl -s -o /dev/null "$SERVER_URL" -X POST \

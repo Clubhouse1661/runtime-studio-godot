@@ -8,11 +8,11 @@ import json
 import pytest
 import websockets
 
-from godot_ai import __version__ as _SERVER_VERSION
-from godot_ai.godot_client.client import GodotClient, GodotCommandError
-from godot_ai.handlers import editor as editor_handlers
-from godot_ai.handlers import scene as scene_handlers
-from godot_ai.runtime.direct import DirectRuntime
+from runtime_studio import __version__ as _SERVER_VERSION
+from runtime_studio.godot_client.client import GodotClient, GodotCommandError
+from runtime_studio.handlers import editor as editor_handlers
+from runtime_studio.handlers import scene as scene_handlers
+from runtime_studio.runtime.direct import DirectRuntime
 
 # ---------------------------------------------------------------------------
 # Handshake
@@ -91,7 +91,7 @@ class TestHandshake:
         assert ack["type"] == "handshake_ack"
         assert ack["server_version"] == _SERVER_VERSION, (
             "ack must quote the server's own package version (from "
-            "godot_ai.__version__), not echo the handshake's plugin_version"
+            "runtime_studio.__version__), not echo the handshake's plugin_version"
         )
         await ws.close()
 
@@ -375,7 +375,7 @@ class TestEventValidation:
         session = harness.registry.get("evt-bad-scene")
         baseline_scene = session.current_scene
 
-        with caplog.at_level("WARNING", logger="godot_ai.transport.websocket"):
+        with caplog.at_level("WARNING", logger="runtime_studio.transport.websocket"):
             await plugin.send_event("scene_changed", {"current_scene": 12345})
             await asyncio.sleep(0.05)
 
@@ -392,7 +392,7 @@ class TestEventValidation:
         session = harness.registry.get("evt-bad-play")
         baseline_play = session.play_state
 
-        with caplog.at_level("WARNING", logger="godot_ai.transport.websocket"):
+        with caplog.at_level("WARNING", logger="runtime_studio.transport.websocket"):
             await plugin.send_event("play_state_changed", {"play_state": ["running"]})
             await asyncio.sleep(0.05)
 
@@ -405,7 +405,7 @@ class TestEventValidation:
         session = harness.registry.get("evt-bad-ready")
         baseline_ready = session.readiness
 
-        with caplog.at_level("WARNING", logger="godot_ai.transport.websocket"):
+        with caplog.at_level("WARNING", logger="runtime_studio.transport.websocket"):
             await plugin.send_event("readiness_changed", {"readiness": {"nested": "obj"}})
             await asyncio.sleep(0.05)
 
@@ -434,7 +434,7 @@ class TestEventValidation:
         plugin = await harness.connect_plugin(session_id="evt-recover")
         session = harness.registry.get("evt-recover")
 
-        with caplog.at_level("WARNING", logger="godot_ai.transport.websocket"):
+        with caplog.at_level("WARNING", logger="runtime_studio.transport.websocket"):
             await plugin.send_event("readiness_changed", {"readiness": 42})
             await asyncio.sleep(0.05)
 

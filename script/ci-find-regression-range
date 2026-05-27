@@ -5,7 +5,7 @@
 #   script/ci-find-regression-range [owner/repo] [workflow_file] [branch]
 #
 # Examples:
-#   script/ci-find-regression-range hi-godot/godot-ai ci.yml main
+#   script/ci-find-regression-range Clubhouse1661/runtime-studio-godot ci.yml main
 #
 # Requirements:
 #   - python3

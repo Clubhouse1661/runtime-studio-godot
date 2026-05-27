@@ -15,12 +15,12 @@ permissions:
 ## workflow runs pytest before publishing; without this flag every tag
 ## push would fire one or more synthetic events.
 env:
-  GODOT_AI_DISABLE_TELEMETRY: "true"
+  RUNTIME_STUDIO_DISABLE_TELEMETRY: "true"
 
 jobs:
   # Publish the Python server package to PyPI FIRST so that by the time the
   # plugin ZIP is released and users self-update, the matching Python package
-  # is already available on PyPI for `uvx --from godot-ai~=<version> godot-ai`
+  # is already available on PyPI for `uvx --from runtime-studio-godot~=<version> runtime-studio-godot`
   # to resolve.
   #
   # Uses PyPI Trusted Publishing (OIDC) — no API tokens / secrets required.
@@ -87,55 +87,55 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Build plugin ZIP
-        # Ship `addons/` + `godot-ai-LICENSE.txt` at the zip's top level. The
+        # Ship `addons/` + `runtime-studio-godot-LICENSE.txt` at the zip's top level. The
         # multi-top shape matters: Godot's AssetLib install dialog defaults
         # "Ignore asset root" to CHECKED whenever it detects a single top-
-        # level folder, which would strip `addons/` and drop `godot_ai/` at
+        # level folder, which would strip `addons/` and drop `runtime_studio/` at
         # res:// — outside the plugin path and outside the addons-warning
         # exclusion. With two top-level entries, Godot doesn't offer the
-        # strip option, so files land as-archived at res://addons/godot_ai/
+        # strip option, so files land as-archived at res://addons/runtime_studio/
         # regardless of any user-toggled preference.
         #
-        # The second top-level entry is namespaced (`godot-ai-LICENSE.txt`)
+        # The second top-level entry is namespaced (`runtime-studio-godot-LICENSE.txt`)
         # rather than a bare `LICENSE`. A bare `LICENSE` lands at
         # `res://LICENSE` on install and silently overwrites the user's own
         # project LICENSE file — issue #450. The namespaced name preserves
         # the AssetLib trick without clobbering anything in a typical project.
         # The canonical addon-scoped license still ships at
-        # `addons/godot_ai/LICENSE` for in-tree consumers.
+        # `addons/runtime_studio/LICENSE` for in-tree consumers.
         run: |
           mkdir -p staging/addons
-          cp -r plugin/addons/godot_ai staging/addons/
-          cp LICENSE staging/godot-ai-LICENSE.txt
+          cp -r plugin/addons/runtime_studio staging/addons/
+          cp LICENSE staging/runtime-studio-godot-LICENSE.txt
           cd staging
           # `-D` strips zero-byte directory entries. The 2.2.x/2.3.0 self-
           # update runner has an over-strict safety check that flags the
-          # bare `addons/godot_ai/` directory entry as unsafe and aborts
+          # bare `addons/runtime_studio/` directory entry as unsafe and aborts
           # the extract. Stripping directory entries lets those installs
           # successfully self-update to a fixed runner.
-          zip -D -r ../godot-ai-plugin.zip addons/ godot-ai-LICENSE.txt
+          zip -D -r ../runtime-studio-godot-plugin.zip addons/ runtime-studio-godot-LICENSE.txt
 
       - name: Verify zip structure
         run: |
           # unzip -Z1 lists only entry names, one per line, no header/footer
-          tops=$(unzip -Z1 godot-ai-plugin.zip | awk -F/ '{print $1}' | sort -u | tr '\n' ' ' | sed 's/ $//')
-          if [ "$tops" != "addons godot-ai-LICENSE.txt" ]; then
-            echo "ERROR: expected top-level entries 'addons godot-ai-LICENSE.txt' in zip, got:" >&2
+          tops=$(unzip -Z1 runtime-studio-godot-plugin.zip | awk -F/ '{print $1}' | sort -u | tr '\n' ' ' | sed 's/ $//')
+          if [ "$tops" != "addons runtime-studio-godot-LICENSE.txt" ]; then
+            echo "ERROR: expected top-level entries 'addons runtime-studio-godot-LICENSE.txt' in zip, got:" >&2
             echo "  $tops" >&2
             exit 1
           fi
-          if ! unzip -Z1 godot-ai-plugin.zip | grep -qx 'addons/godot_ai/plugin.cfg'; then
-            echo "ERROR: plugin.cfg not at expected path addons/godot_ai/plugin.cfg" >&2
+          if ! unzip -Z1 runtime-studio-godot-plugin.zip | grep -qx 'addons/runtime_studio/plugin.cfg'; then
+            echo "ERROR: plugin.cfg not at expected path addons/runtime_studio/plugin.cfg" >&2
             exit 1
           fi
-          if ! unzip -Z1 godot-ai-plugin.zip | grep -qx 'godot-ai-LICENSE.txt'; then
-            echo "ERROR: godot-ai-LICENSE.txt not present at zip root" >&2
+          if ! unzip -Z1 runtime-studio-godot-plugin.zip | grep -qx 'runtime-studio-godot-LICENSE.txt'; then
+            echo "ERROR: runtime-studio-godot-LICENSE.txt not present at zip root" >&2
             exit 1
           fi
           # Guard against the issue-#450 regression: a bare `LICENSE` at zip
           # root would silently overwrite the installing project's own
           # LICENSE on AssetLib install.
-          if unzip -Z1 godot-ai-plugin.zip | grep -qx 'LICENSE'; then
+          if unzip -Z1 runtime-studio-godot-plugin.zip | grep -qx 'LICENSE'; then
             echo "ERROR: zip contains bare 'LICENSE' at root — would clobber user project LICENSE on install (see #450)" >&2
             exit 1
           fi
@@ -145,24 +145,24 @@ jobs:
           # ending in `/`, so any release zip emitted without `zip -D` will
           # abort the extract on those installs and strand them. This guard
           # is the rescue mechanism's CI invariant — see PR #281, issue #283.
-          if unzip -Z1 godot-ai-plugin.zip | grep -qE '/$'; then
+          if unzip -Z1 runtime-studio-godot-plugin.zip | grep -qE '/$'; then
             echo "ERROR: zip contains directory entries (forgot \`zip -D\`?):" >&2
-            unzip -Z1 godot-ai-plugin.zip | grep -E '/$' >&2
+            unzip -Z1 runtime-studio-godot-plugin.zip | grep -E '/$' >&2
             exit 1
           fi
           # Guard against macOS iCloud-sync duplicates (filenames like `foo 2.gd`)
           # sneaking in via a contaminated checkout. CI should never hit this
           # on a fresh actions/checkout, but a manual build from a synced
           # working tree could. Fail loudly if any are present.
-          if unzip -Z1 godot-ai-plugin.zip | grep -q ' 2\.'; then
+          if unzip -Z1 runtime-studio-godot-plugin.zip | grep -q ' 2\.'; then
             echo "ERROR: zip contains iCloud-duplicate files (pattern ' 2.'):" >&2
-            unzip -Z1 godot-ai-plugin.zip | grep ' 2\.' >&2
+            unzip -Z1 runtime-studio-godot-plugin.zip | grep ' 2\.' >&2
             exit 1
           fi
-          echo "Zip structure verified: addons/godot_ai/... + godot-ai-LICENSE.txt (multi-top)"
+          echo "Zip structure verified: addons/runtime_studio/... + runtime-studio-godot-LICENSE.txt (multi-top)"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          files: godot-ai-plugin.zip
+          files: runtime-studio-godot-plugin.zip
           generate_release_notes: true

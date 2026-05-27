@@ -6,7 +6,9 @@ from pathlib import Path
 
 from tests.unit._gdscript_text import get_func_block
 
-PLUGIN_GD = Path(__file__).resolve().parents[2] / "plugin" / "addons" / "godot_ai" / "plugin.gd"
+PLUGIN_GD = (
+    Path(__file__).resolve().parents[2] / "plugin" / "addons" / "runtime_studio" / "plugin.gd"
+)
 
 
 def test_recover_incompatible_success_unblocks_existing_connection() -> None:
@@ -26,7 +28,7 @@ def test_recover_incompatible_success_unblocks_existing_connection() -> None:
         Path(__file__).resolve().parents[2]
         / "plugin"
         / "addons"
-        / "godot_ai"
+        / "runtime_studio"
         / "utils"
         / "server_lifecycle.gd"
     ).read_text(encoding="utf-8")

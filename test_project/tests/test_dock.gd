@@ -5,10 +5,10 @@ extends McpTestSuite
 ## static McpClientConfigurator calls, so we just assert the text tracks
 ## whatever mode the current test environment is actually running in.
 
-const McpDockScript = preload("res://addons/godot_ai/mcp_dock.gd")
-const GodotAiPlugin := preload("res://addons/godot_ai/plugin.gd")
-const PortPickerPanelScript = preload("res://addons/godot_ai/dock_panels/port_picker_panel.gd")
-const LogViewerScript = preload("res://addons/godot_ai/dock_panels/log_viewer.gd")
+const McpDockScript = preload("res://addons/runtime_studio/mcp_dock.gd")
+const RuntimeStudioPlugin := preload("res://addons/runtime_studio/plugin.gd")
+const PortPickerPanelScript = preload("res://addons/runtime_studio/dock_panels/port_picker_panel.gd")
+const LogViewerScript = preload("res://addons/runtime_studio/dock_panels/log_viewer.gd")
 
 ## Stub for the dock's `_update_manager` slot. Tests that want to fake
 ## "self-update mid-install" inject one of these so the dock's
@@ -20,7 +20,7 @@ class _StubInstallGate extends Node:
 	func is_install_in_flight() -> bool:
 		return in_flight
 
-class _RestartDispatchPlugin extends GodotAiPlugin:
+class _RestartDispatchPlugin extends RuntimeStudioPlugin:
 	var status: Dictionary = {}
 	var can_restart := false
 	var force_restart_calls := 0
@@ -162,14 +162,14 @@ func test_mixed_state_banner_hidden_in_clean_addons_tree() -> void:
 func test_mixed_state_banner_renders_synthetic_diagnostic() -> void:
 	## Drive the render seam with a fake diagnostic so the banner contract
 	## (visibility + label text + file list) is pinned without polluting
-	## the real `addons/godot_ai/` tree with `.update_backup` files. This
+	## the real `addons/runtime_studio/` tree with `.update_backup` files. This
 	## covers Copilot's "dock banner is untested" finding on PR #382.
 	_dock._build_ui()
 	var fake_diag := {
-		"addon_dir": "res://addons/godot_ai/",
+		"addon_dir": "res://addons/runtime_studio/",
 		"backup_files": [
-			"res://addons/godot_ai/handlers/scene_handler.gd.update_backup",
-			"res://addons/godot_ai/plugin.gd.update_backup",
+			"res://addons/runtime_studio/handlers/scene_handler.gd.update_backup",
+			"res://addons/runtime_studio/plugin.gd.update_backup",
 		],
 		"backup_count": 2,
 		"truncated": false,
@@ -199,8 +199,8 @@ func test_mixed_state_banner_re_hides_when_diagnostic_empties() -> void:
 	## with `{}` so the button delivers the dismissal it advertises.
 	_dock._build_ui()
 	_dock._apply_mixed_state_banner_diagnostic({
-		"addon_dir": "res://addons/godot_ai/",
-		"backup_files": ["res://addons/godot_ai/foo.gd.update_backup"],
+		"addon_dir": "res://addons/runtime_studio/",
+		"backup_files": ["res://addons/runtime_studio/foo.gd.update_backup"],
 		"backup_count": 1,
 		"truncated": false,
 		"message": "show me",
@@ -221,8 +221,8 @@ func test_mixed_state_banner_renders_truncated_hint() -> void:
 	## stays accurate if the cap moves.
 	_dock._build_ui()
 	_dock._apply_mixed_state_banner_diagnostic({
-		"addon_dir": "res://addons/godot_ai/",
-		"backup_files": ["res://addons/godot_ai/x.gd.update_backup"],
+		"addon_dir": "res://addons/runtime_studio/",
+		"backup_files": ["res://addons/runtime_studio/x.gd.update_backup"],
 		"backup_count": 200,
 		"truncated": true,
 		"message": "lots of backups",
@@ -259,7 +259,7 @@ func test_incompatible_server_marks_clients_unhealthy() -> void:
 	var plugin := _RestartDispatchPlugin.new()
 	plugin.status = {
 		"state": McpServerState.INCOMPATIBLE,
-		"message": "Port 8000 is occupied by godot-ai server v1.2.10; plugin expects v2.2.0.",
+		"message": "Port 8000 is occupied by runtime-studio-godot server v1.2.10; plugin expects v2.2.0.",
 		"connection_blocked": true,
 	}
 	_dock._plugin = plugin
@@ -271,7 +271,7 @@ func test_incompatible_server_marks_clients_unhealthy() -> void:
 	assert_eq(dot.color, Color.RED, "Blocked incompatible server must render client rows red")
 	assert_contains(
 		(row["name_label"] as Label).text,
-		"Port 8000 is occupied by godot-ai server v1.2.10",
+		"Port 8000 is occupied by runtime-studio-godot server v1.2.10",
 		"Client row must explain the live server mismatch instead of looking healthy"
 	)
 	plugin.free()
@@ -435,14 +435,14 @@ func _cleanup_server_row(conn: McpConnection) -> void:
 
 func test_server_version_label_muted_when_ack_not_received() -> void:
 	## Pre-ack: show the expected version only as an unverified target.
-	## The row must not state "godot-ai == <plugin>" as a fact until the
+	## The row must not state "runtime-studio-godot == <plugin>" as a fact until the
 	## live server has reported that exact version.
 	var conn := _seed_server_row("")
 	_dock._refresh_server_version_label()
 	var plugin_ver := McpClientConfigurator.get_plugin_version()
 	assert_eq(
 		_dock._setup_server_label.text,
-		"checking live version (expected godot-ai == %s)" % plugin_ver
+		"checking live version (expected runtime-studio-godot == %s)" % plugin_ver
 	)
 	assert_false(_dock._version_restart_btn.visible, "Restart button stays hidden pre-ack")
 	_cleanup_server_row(conn)
@@ -453,7 +453,7 @@ func test_server_version_label_green_when_server_matches_plugin() -> void:
 	var plugin_ver := McpClientConfigurator.get_plugin_version()
 	var conn := _seed_server_row(plugin_ver)
 	_dock._refresh_server_version_label()
-	assert_eq(_dock._setup_server_label.text, "godot-ai == %s" % plugin_ver,
+	assert_eq(_dock._setup_server_label.text, "runtime-studio-godot == %s" % plugin_ver,
 		"Match: label omits the '(plugin X)' suffix since there's no drift to flag")
 	assert_true(_dock._setup_server_label.has_theme_color_override("font_color"))
 	var color: Color = _dock._setup_server_label.get_theme_color("font_color")
@@ -492,7 +492,7 @@ func test_server_version_label_repaints_color_when_state_changes_without_text_ch
 	## after the plugin marks the server incompatible; the color must still
 	## repaint from amber to red so the blocked state is visible.
 	var conn := _seed_server_row("1.2.3-stale-for-test")
-	var plugin := GodotAiPlugin.new()
+	var plugin := RuntimeStudioPlugin.new()
 	plugin._lifecycle._server_actual_version = "1.2.3-stale-for-test"
 	plugin._lifecycle._server_expected_version = "2.2.0"
 	plugin._lifecycle._server_state = McpServerState.READY
@@ -533,7 +533,7 @@ func test_server_version_label_shows_restart_for_recoverable_incompatible_server
 	_dock._refresh_server_version_label()
 	assert_true(
 		_dock._version_restart_btn.visible,
-		"recoverable incompatible godot-ai server should offer the user-confirmed restart"
+		"recoverable incompatible runtime-studio-godot server should offer the user-confirmed restart"
 	)
 
 	_dock._plugin = null
@@ -583,7 +583,7 @@ func test_dev_checkout_tooltip_exposes_symlink_target() -> void:
 		assert_contains(tooltip, "Reload Plugin")
 		return
 	assert_true(target.is_absolute_path(), "Resolved symlink target must be absolute: %s" % target)
-	assert_contains(target, "godot_ai", "Symlink should point at a godot_ai plugin tree: %s" % target)
+	assert_contains(target, "runtime_studio", "Symlink should point at a runtime_studio plugin tree: %s" % target)
 	var tooltip: String = _dock._install_mode_tooltip()
 	assert_contains(tooltip, target, "Tooltip should embed the resolved target path")
 
@@ -789,21 +789,21 @@ func test_drain_client_action_workers_restores_in_flight_row_buttons() -> void:
 func test_incompatible_server_body_uses_actionable_message() -> void:
 	var body := McpDockScript._crash_body_for_state(
 		McpServerState.INCOMPATIBLE,
-		{"message": "Port 8000 is occupied by godot-ai server v1.2.10; plugin expects v2.2.0. Stop the old server or change both HTTP and WS ports."},
+		{"message": "Port 8000 is occupied by runtime-studio-godot server v1.2.10; plugin expects v2.2.0. Stop the old server or change both HTTP and WS ports."},
 	)
-	assert_contains(body, "godot-ai server v1.2.10")
+	assert_contains(body, "runtime-studio-godot server v1.2.10")
 	assert_contains(body, "plugin expects v2.2.0")
 	assert_contains(body, "change both HTTP and WS ports")
 
 
 func test_incompatible_server_hides_http_only_port_picker() -> void:
-	## Incompatible godot-ai servers commonly hold both HTTP and WS ports.
+	## Incompatible runtime-studio-godot servers commonly hold both HTTP and WS ports.
 	## The quick picker only changes HTTP, so showing it here advertises a
 	## partial recovery path that can leave the editor disconnected.
 	_dock._build_ui()
 	_dock._update_crash_panel({
 		"state": McpServerState.INCOMPATIBLE,
-		"message": "Port 8000 is occupied by godot-ai server v1.2.10",
+		"message": "Port 8000 is occupied by runtime-studio-godot server v1.2.10",
 	})
 	assert_true(_dock._crash_panel.visible, "diagnostic panel still shows")
 	assert_false(_dock._port_picker_panel.visible, "HTTP-only picker must stay hidden")

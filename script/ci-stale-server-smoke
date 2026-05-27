@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Live smoke: plugin kills a stale port-8000 server and respawns its own.
 
-Plants a synthetic godot-ai server simulator (different version) on port 8000,
+Plants a synthetic runtime-studio-godot server simulator (different version) on port 8000,
 launches Godot headless against test_project/, and asserts that the plugin's
 `recover_strong_port_occupant` path observably:
 
   1. Detects the version mismatch.
   2. Logs `MCP | strong proof: <name>`.
   3. Logs `MCP | killed pids [...]`.
-  4. Spawns its own server (`/godot-ai/status` reports the plugin version).
+  4. Spawns its own server (`/runtime-studio-godot/status` reports the plugin version).
   5. The simulator PID is gone.
 
 Backfills the automated coverage gap: the unit tests in test_plugin_lifecycle.gd
@@ -39,7 +39,7 @@ TEST_PROJECT = ROOT / "test_project"
 PORT = 8000
 WS_PORT = 9500
 STALE_VERSION = "0.0.0-stale"
-STATUS_URL = f"http://127.0.0.1:{PORT}/godot-ai/status"
+STATUS_URL = f"http://127.0.0.1:{PORT}/runtime-studio-godot/status"
 EXPECTED_PROOF_NAMES = ("managed_record", "pidfile_listener", "status_matches_record")
 LOG_LINES_TIMEOUT = 60.0
 FRESH_STATUS_TIMEOUT = 30.0
@@ -54,7 +54,7 @@ func _initialize() -> void:
 
 
 SIM_SOURCE = '''\
-"""Stale godot-ai server simulator for ci-stale-server-smoke."""
+"""Stale runtime-studio-godot server simulator for ci-stale-server-smoke."""
 import argparse
 import json
 import os
@@ -79,9 +79,9 @@ class H(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        if self.path == "/godot-ai/status":
+        if self.path == "/runtime-studio-godot/status":
             body = json.dumps({
-                "name": "godot-ai",
+                "name": "runtime-studio-godot",
                 "version": args.fake_version,
                 "ws_port": args.ws_port,
             }).encode()
@@ -108,7 +108,7 @@ class FastBindServer(ThreadingHTTPServer):
 
 
 # Bind FIRST so the "listening" print isn't a lie — the smoke polls
-# /godot-ai/status immediately after seeing it.
+# /runtime-studio-godot/status immediately after seeing it.
 server = FastBindServer(("127.0.0.1", args.port), H)
 print(f"stale-sim pid={os.getpid()} listening on :{args.port}", flush=True)
 server.serve_forever()
@@ -122,7 +122,7 @@ class SmokeError(RuntimeError):
 def discover_user_dir(godot: str) -> Path:
     """Ask Godot itself for `OS.get_user_data_dir()`. More reliable than
     re-deriving the per-OS convention by hand — the plugin reads
-    `user://godot_ai_server.pid` via Godot's own resolution, so we must
+    `user://runtime_studio_server.pid` via Godot's own resolution, so we must
     write the pidfile to the *exact* same place."""
     helper = TEST_PROJECT / "_smoke_get_user_dir.gd"
     helper.write_text(DISCOVER_USER_DIR_GD, encoding="utf-8")
@@ -144,7 +144,7 @@ def discover_user_dir(godot: str) -> Path:
 
 
 def write_sim(workdir: Path) -> Path:
-    pkg = workdir / "godot_ai"
+    pkg = workdir / "runtime_studio"
     pkg.mkdir(parents=True, exist_ok=True)
     # Explicit UTF-8 — Path.write_text defaults to locale encoding (cp1252 on
     # Windows), which would mangle non-ASCII chars in docstrings into bytes
@@ -165,7 +165,7 @@ def wait_for_status(
     timeout_s: float,
     sim: subprocess.Popen | None = None,
 ) -> dict:
-    """Poll /godot-ai/status until it returns the expected version (or any
+    """Poll /runtime-studio-godot/status until it returns the expected version (or any
     JSON if version is None). Returns the parsed payload. When `sim` is
     given, fail fast if it dies — there's no point waiting 30s for a port
     nobody is bound to anymore."""
@@ -261,7 +261,7 @@ def find_godot() -> str:
 
 
 def find_plugin_version() -> str:
-    cfg = ROOT / "plugin" / "addons" / "godot_ai" / "plugin.cfg"
+    cfg = ROOT / "plugin" / "addons" / "runtime_studio" / "plugin.cfg"
     for line in cfg.read_text().splitlines():
         if line.startswith("version="):
             return line.split("=", 1)[1].strip().strip('"')
@@ -282,16 +282,16 @@ def main() -> int:
     godot = find_godot()
     plugin_version = find_plugin_version()
 
-    godot_ai_path = shutil.which("godot-ai") or "(not on PATH)"
+    runtime_studio_path = shutil.which("runtime-studio-godot") or "(not on PATH)"
     print(f"godot={godot}")
-    print(f"godot-ai={godot_ai_path}")
+    print(f"runtime-studio-godot={runtime_studio_path}")
     print(f"plugin version={plugin_version}")
 
     print("discovering Godot user data dir...")
     user_dir = discover_user_dir(godot)
     print(f"user data dir={user_dir}")
     user_dir.mkdir(parents=True, exist_ok=True)
-    pidfile = user_dir / "godot_ai_server.pid"
+    pidfile = user_dir / "runtime_studio_server.pid"
     print(f"pidfile={pidfile}")
 
     # Pre-clean: stale pidfile / managed record from a prior run would route
@@ -307,7 +307,7 @@ def main() -> int:
         env = os.environ.copy()
         env["PYTHONPATH"] = str(workdir) + os.pathsep + env.get("PYTHONPATH", "")
         sim_cmd = [
-            sys.executable, "-m", "godot_ai",
+            sys.executable, "-m", "runtime_studio",
             "--transport", "streamable-http",
             "--port", str(PORT),
             "--ws-port", str(WS_PORT),
@@ -327,7 +327,7 @@ def main() -> int:
         log_fh = editor_log.open("ab")
         try:
             godot_env = os.environ.copy()
-            godot_env["GODOT_AI_ALLOW_HEADLESS"] = "1"
+            godot_env["RUNTIME_STUDIO_ALLOW_HEADLESS"] = "1"
             godot_cmd = [godot, "--headless", "--path", str(TEST_PROJECT), "--editor"]
             print(f"launching godot: {' '.join(godot_cmd)}")
             godot_proc = subprocess.Popen(godot_cmd, env=godot_env, stdout=log_fh, stderr=log_fh)
@@ -381,9 +381,9 @@ def main() -> int:
         print(f"===== user data dir state ({user_dir}) =====", file=sys.stderr)
         if user_dir.exists():
             for entry in sorted(user_dir.iterdir()):
-                marker = "[pidfile]" if entry.name == "godot_ai_server.pid" else ""
+                marker = "[pidfile]" if entry.name == "runtime_studio_server.pid" else ""
                 print(f"  {entry.name} {marker}", file=sys.stderr)
-                if entry.name == "godot_ai_server.pid":
+                if entry.name == "runtime_studio_server.pid":
                     try:
                         print(f"    contents: {entry.read_text().strip()!r}", file=sys.stderr)
                     except OSError as oe:
@@ -393,7 +393,7 @@ def main() -> int:
         print(f"===== MCP-tagged log lines =====", file=sys.stderr)
         if editor_log.exists():
             for line in editor_log.read_text(errors="replace").splitlines():
-                if "MCP " in line or "godot_ai" in line or "godot-ai" in line:
+                if "MCP " in line or "runtime_studio" in line or "runtime-studio-godot" in line:
                     print(f"  {line}", file=sys.stderr)
             print(f"===== editor log (last 200 lines) =====", file=sys.stderr)
             tail = editor_log.read_text(errors="replace").splitlines()[-200:]

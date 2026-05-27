@@ -8,8 +8,8 @@ from pathlib import Path
 
 import pytest
 
-from godot_ai.server import create_server
-from godot_ai.tools.domains import (
+from runtime_studio.server import create_server
+from runtime_studio.tools.domains import (
     CORE_BEARING_DOMAINS,
     CORE_TOOLS,
     DOMAINS,
@@ -18,15 +18,15 @@ from godot_ai.tools.domains import (
 )
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-_SRC_ROOT = _REPO_ROOT / "src" / "godot_ai"
+_SRC_ROOT = _REPO_ROOT / "src" / "runtime_studio"
 ## Path to the GDScript catalog the dock UI reads. Parity test below parses
 ## it and verifies it matches live registration — if this file moves, update
 ## here and in the dock.
-_CATALOG_GD = _REPO_ROOT / "plugin" / "addons" / "godot_ai" / "tool_catalog.gd"
+_CATALOG_GD = _REPO_ROOT / "plugin" / "addons" / "runtime_studio" / "tool_catalog.gd"
 _RUNTIME_BOUNDARY_DOCS = [
     _REPO_ROOT / "CLAUDE.md",
     _REPO_ROOT / "docs" / "plugin-architecture.md",
-    _REPO_ROOT / ".claude" / "skills" / "godot-ai" / "skill.md",
+    _REPO_ROOT / ".claude" / "skills" / "runtime-studio-godot" / "skill.md",
 ]
 
 
@@ -51,7 +51,7 @@ def test_runtime_protocol_is_not_reintroduced_without_injection_seam():
         if "__pycache__" in path.parts:
             continue
         text = path.read_text(encoding="utf-8")
-        if "godot_ai.runtime.interface" in text or "class Runtime(Protocol)" in text:
+        if "runtime_studio.runtime.interface" in text or "class Runtime(Protocol)" in text:
             offenders.append(str(path.relative_to(_REPO_ROOT)))
     assert offenders == [], f"Runtime Protocol references reintroduced in: {offenders}"
 
@@ -172,13 +172,13 @@ def _parse_gd_catalog() -> tuple[list[str], dict[str, list[str]]]:
 
 
 def test_gdscript_catalog_matches_python_registration():
-    """If this fails, tool_catalog.gd drifted from src/godot_ai/tools/*.
+    """If this fails, tool_catalog.gd drifted from src/runtime_studio/tools/*.
 
     The failure message lists what's missing/extra per domain so a developer
     can update the GDScript const. Regenerate with:
 
-        python -c "from godot_ai.server import create_server; \\
-                   from godot_ai.tools.domains import EXCLUDABLE_DOMAINS; \\
+        python -c "from runtime_studio.server import create_server; \\
+                   from runtime_studio.tools.domains import EXCLUDABLE_DOMAINS; \\
                    import asyncio; \\
                    full = {t.name for t in asyncio.run(create_server().list_tools())}; \\
                    for d in sorted(EXCLUDABLE_DOMAINS): \\

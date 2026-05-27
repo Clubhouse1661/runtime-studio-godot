@@ -36,17 +36,19 @@ def test_v232_runner_documents_v240_parse_errors(tmp_path: Path) -> None:
 
     godot_bin = godot_bin_or_skip()
     cache_dir = Path(
-        os.environ.get("GODOT_AI_RELEASE_ZIP_CACHE", Path.cwd() / ".release-zip-cache")
+        os.environ.get("RUNTIME_STUDIO_RELEASE_ZIP_CACHE", Path.cwd() / ".release-zip-cache")
     )
     base_zip = release_zip_from_cache(cache_dir, "v2.3.2")
     next_zip = release_zip_from_cache(cache_dir, "v2.4.0")
     if base_zip is None or next_zip is None:
-        pytest.skip("cached v2.3.2 and v2.4.0 godot-ai-plugin.zip artifacts are required")
+        pytest.skip(
+            "cached v2.3.2 and v2.4.0 runtime-studio-godot-plugin.zip artifacts are required"
+        )
 
     project = tmp_path / "self-update-historical"
     prepare_project_shell(project)
     write_historical_driver(project)
-    base_addon = project / "addons" / "godot_ai"
+    base_addon = project / "addons" / "runtime_studio"
     extract_addon_from_zip(base_zip, base_addon)
     patch_server_start_noop(base_addon / "plugin.gd")
     shutil.copy2(next_zip, project / "_test_update_zip" / TEST_ZIP_NAME)
@@ -101,7 +103,7 @@ func _process(_delta: float) -> void:
 \tif not _started and _frames >= START_AFTER_FRAMES:
 \t\t_started = true
 \t\tprint("SELF_UPDATE_HISTORICAL | starting runner")
-\t\tvar Runner := load("res://addons/godot_ai/update_reload_runner.gd")
+\t\tvar Runner := load("res://addons/runtime_studio/update_reload_runner.gd")
 \t\tif Runner == null:
 \t\t\tpush_error("SELF_UPDATE_HISTORICAL | failed to load runner")
 \t\t\t_finished = true

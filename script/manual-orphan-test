@@ -131,10 +131,10 @@ find_python() {
 }
 
 write_orphan_sim() {
-    mkdir -p "$ORPHAN_ROOT/godot_ai"
-    : > "$ORPHAN_ROOT/godot_ai/__init__.py"
-    cat > "$ORPHAN_ROOT/godot_ai/__main__.py" <<'PY'
-"""Minimal orphan godot-ai server simulator for manual PR verification."""
+    mkdir -p "$ORPHAN_ROOT/runtime_studio"
+    : > "$ORPHAN_ROOT/runtime_studio/__init__.py"
+    cat > "$ORPHAN_ROOT/runtime_studio/__main__.py" <<'PY'
+"""Minimal orphan runtime-studio-godot server simulator for manual PR verification."""
 import argparse
 import json
 import os
@@ -148,12 +148,12 @@ ap.add_argument("--pid-file", required=True)
 ap.add_argument(
     "--fake-version",
     default="2.2.0",
-    help="value returned in /godot-ai/status; use 'none' to drop version",
+    help="value returned in /runtime-studio-godot/status; use 'none' to drop version",
 )
 ap.add_argument(
     "--fake-name",
-    default="godot-ai",
-    help="name in /godot-ai/status; 'none' drops the endpoint",
+    default="runtime-studio-godot",
+    help="name in /runtime-studio-godot/status; 'none' drops the endpoint",
 )
 args = ap.parse_args()
 
@@ -168,7 +168,7 @@ class H(BaseHTTPRequestHandler):
         pass
 
     def do_GET(self):
-        if self.path == "/godot-ai/status" and args.fake_name.lower() != "none":
+        if self.path == "/runtime-studio-godot/status" and args.fake_name.lower() != "none":
             payload = {
                 "name": args.fake_name,
                 "version": args.fake_version,
@@ -212,7 +212,7 @@ class H(BaseHTTPRequestHandler):
     def do_GET(self):
         body = json.dumps(
             {
-                "name": "godot-ai",
+                "name": "runtime-studio-godot",
                 "version": args.fake_version,
                 "ws_port": args.ws_port,
             }
@@ -302,8 +302,8 @@ print_editor_settings_preflight() {
         echo
         echo "Active EditorSettings:"
         echo "  $active"
-        echo "godot_ai settings:"
-        if ! grep -E 'godot_ai/(http_port|ws_port|managed_server_(pid|version|ws_port))' "$active_bash" 2>/dev/null | sed 's/^/  /'; then
+        echo "runtime_studio settings:"
+        if ! grep -E 'runtime_studio/(http_port|ws_port|managed_server_(pid|version|ws_port))' "$active_bash" 2>/dev/null | sed 's/^/  /'; then
             echo "  (none found; defaults are http_port=8000 and ws_port=9500)"
         fi
     else
@@ -355,14 +355,14 @@ if ($null -ne $proc -and $proc.CommandLine) {
 
 print_checkout_preflight() {
     local version git_head
-    version="$(sed -n 's/^version="\([^"]*\)"/\1/p' "$repo_root/plugin/addons/godot_ai/plugin.cfg" | head -n 1)"
+    version="$(sed -n 's/^version="\([^"]*\)"/\1/p' "$repo_root/plugin/addons/runtime_studio/plugin.cfg" | head -n 1)"
     git_head="$(git -C "$repo_root" rev-parse --short HEAD 2>/dev/null || true)"
     echo "Checkout:"
     echo "  repo:    $repo_root"
     echo "  git:     ${git_head:-unavailable}"
     echo "  plugin:  ${version:-unknown}"
     echo "Proof symbols:"
-    local plugin_gd="$repo_root/plugin/addons/godot_ai/plugin.gd"
+    local plugin_gd="$repo_root/plugin/addons/runtime_studio/plugin.gd"
     local sym marker
     for sym in \
         'MCP | strong proof:' \
@@ -441,12 +441,12 @@ run_sanity() {
 
     local py
     py="$(find_python)"
-    local pidfile="$HOME/.local/share/godot/app_userdata/MCP Test Project/godot_ai_server.pid"
+    local pidfile="$HOME/.local/share/godot/app_userdata/MCP Test Project/runtime_studio_server.pid"
     if is_windows_bash; then
         local appdata
         appdata="$(powershell.exe -NoProfile -Command '[Environment]::GetFolderPath("ApplicationData")' 2>/dev/null | tr -d '\r' || true)"
         if [ -n "$appdata" ]; then
-            pidfile="$(to_bash_path "$appdata\\Godot\\app_userdata\\MCP Test Project\\godot_ai_server.pid")"
+            pidfile="$(to_bash_path "$appdata\\Godot\\app_userdata\\MCP Test Project\\runtime_studio_server.pid")"
         fi
     fi
     mkdir -p "$(dirname "$pidfile")"
@@ -498,7 +498,7 @@ run_sanity() {
     }
     trap cleanup EXIT
 
-    "$py" -m godot_ai \
+    "$py" -m runtime_studio \
         --transport streamable-http \
         --port 8000 \
         --ws-port 9500 \
@@ -510,13 +510,13 @@ run_sanity() {
     echo
     echo "Status endpoint:"
     if command -v curl >/dev/null 2>&1; then
-        curl -fsS http://127.0.0.1:8000/godot-ai/status | "$py" -m json.tool
+        curl -fsS http://127.0.0.1:8000/runtime-studio-godot/status | "$py" -m json.tool
     else
         "$py" - <<'PY'
 import json
 from urllib.request import urlopen
 
-with urlopen("http://127.0.0.1:8000/godot-ai/status", timeout=2) as r:
+with urlopen("http://127.0.0.1:8000/runtime-studio-godot/status", timeout=2) as r:
     print(json.dumps(json.loads(r.read()), indent=4))
 PY
     fi
@@ -537,7 +537,7 @@ PY
         powershell.exe -NoProfile -Command "\$p = Get-CimInstance Win32_Process -Filter 'ProcessId=$inspect_pid'; if (\$p) { \$p.CommandLine } else { exit 1 }"
     else
         echo "ps command-line inspection is unavailable in this shell."
-        echo "Expected fingerprint: godot_ai --transport ... --pid-file ..."
+        echo "Expected fingerprint: runtime_studio --transport ... --pid-file ..."
     fi
 }
 
@@ -546,15 +546,15 @@ print_instructions() {
     local posix_project posix_repo repo_win project_win plugin_version
     orphan_pp="$(pythonpath_for_shell "$ORPHAN_ROOT")"
     status_pp="$(pythonpath_for_shell "$STATUS_ROOT")"
-    plugin_version="$(sed -n 's/^version="\([^"]*\)"/\1/p' "$repo_root/plugin/addons/godot_ai/plugin.cfg" | head -n 1)"
+    plugin_version="$(sed -n 's/^version="\([^"]*\)"/\1/p' "$repo_root/plugin/addons/runtime_studio/plugin.cfg" | head -n 1)"
     plugin_version="${plugin_version:-unknown}"
     if is_windows_bash; then
         orphan_pwsh_pp="$(to_windows_path "$ORPHAN_ROOT")"
         status_pwsh_pp="$(to_windows_path "$STATUS_ROOT")"
         posix_orphan_pp="/tmp/orphan-sim"
         posix_status_pp="/tmp/sim-statusonly"
-        posix_repo="\$HOME/godot-ai"
-        posix_project="\$HOME/godot-ai/test_project"
+        posix_repo="\$HOME/runtime-studio-godot"
+        posix_project="\$HOME/runtime-studio-godot/test_project"
         repo_win="$(to_windows_path "$repo_root")"
     else
         orphan_pwsh_pp='C:\tmp\orphan-sim'
@@ -563,7 +563,7 @@ print_instructions() {
         posix_status_pp="$status_pp"
         posix_repo="$repo_root"
         posix_project="$repo_root/test_project"
-        repo_win='C:\path\to\godot-ai'
+        repo_win='C:\path\to\runtime-studio-godot'
     fi
     project_win="$repo_win\\test_project"
 
@@ -577,13 +577,13 @@ Run these before the scenarios:
 
 This prepares two fake modules:
 
-    orphan godot_ai module:      $ORPHAN_ROOT
+    orphan runtime_studio module:      $ORPHAN_ROOT
     status-only occupant module: $STATUS_ROOT
 
 The preflight prints:
 
 - candidate Godot EditorSettings files, including editor_settings-4.6.tres
-- current godot_ai/http_port, godot_ai/ws_port, and managed-server keys
+- current runtime_studio/http_port, runtime_studio/ws_port, and managed-server keys
 - current port-8000 listener PID and command line
 - checkout commit, plugin version, and proof-symbol presence
 
@@ -615,29 +615,29 @@ PowerShell:
     \$ed = \$edCandidates | Where-Object { Test-Path -LiteralPath \$_ } | Select-Object -First 1
     if (-not \$ed) { throw "No Godot editor_settings-4*.tres found under APPDATA\\Godot" }
     Copy-Item -LiteralPath \$ed -Destination ("\$ed.bak-" + (Get-Date -Format yyyyMMdd-HHmmss))
-    Select-String -LiteralPath \$ed -Pattern 'godot_ai/(http_port|ws_port|managed_server_)'
+    Select-String -LiteralPath \$ed -Pattern 'runtime_studio/(http_port|ws_port|managed_server_)'
 
 Then edit \$ed so these lines are present exactly once:
 
-    godot_ai/http_port = 8000
-    godot_ai/ws_port = 9500
+    runtime_studio/http_port = 8000
+    runtime_studio/ws_port = 9500
 
 For scenarios that require a clean ownership record, remove or zero:
 
-    godot_ai/managed_server_pid
-    godot_ai/managed_server_version
-    godot_ai/managed_server_ws_port
+    runtime_studio/managed_server_pid
+    runtime_studio/managed_server_version
+    runtime_studio/managed_server_ws_port
 
 And remove the pidfile when the scenario says "clean record":
 
-    Remove-Item -LiteralPath "\$env:APPDATA\\Godot\\app_userdata\\MCP Test Project\\godot_ai_server.pid" -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath "\$env:APPDATA\\Godot\\app_userdata\\MCP Test Project\\runtime_studio_server.pid" -ErrorAction SilentlyContinue
 
 POSIX:
 
     EDITOR_SETTINGS="\$HOME/.config/godot/editor_settings-4.6.tres"
     [ -f "\$EDITOR_SETTINGS" ] || EDITOR_SETTINGS="\$HOME/.config/godot/editor_settings-4.tres"
     cp "\$EDITOR_SETTINGS" "\$EDITOR_SETTINGS.bak-\$(date +%Y%m%d-%H%M%S)"
-    grep -E 'godot_ai/(http_port|ws_port|managed_server_)' "\$EDITOR_SETTINGS" || true
+    grep -E 'runtime_studio/(http_port|ws_port|managed_server_)' "\$EDITOR_SETTINGS" || true
 
 Launching Godot may dirty test_project/project.godot. After each scenario:
 
@@ -652,25 +652,25 @@ On Windows:
 Port 8000 must be free:
 
     PYTHON_BIN="\${PYTHON:-python3}"
-    PYTHONPATH="$orphan_pp" "\$PYTHON_BIN" -m godot_ai \\
+    PYTHONPATH="$orphan_pp" "\$PYTHON_BIN" -m runtime_studio \\
       --transport streamable-http --port 8000 --ws-port 9500 \\
-      --pid-file "\$HOME/.local/share/godot/app_userdata/MCP Test Project/godot_ai_server.pid" \\
+      --pid-file "\$HOME/.local/share/godot/app_userdata/MCP Test Project/runtime_studio_server.pid" \\
       --fake-version 2.2.0 &
     SIM_PID=\$!
     sleep 0.5
-    curl -s http://127.0.0.1:8000/godot-ai/status | "\$PYTHON_BIN" -m json.tool
+    curl -s http://127.0.0.1:8000/runtime-studio-godot/status | "\$PYTHON_BIN" -m json.tool
     ps -ww -p \$SIM_PID -o args=
     kill \$SIM_PID
 
-Expected: JSON includes name=godot-ai and version=2.2.0. The command line
-contains "godot_ai --transport ... --pid-file ...".
+Expected: JSON includes name=runtime-studio-godot and version=2.2.0. The command line
+contains "runtime_studio --transport ... --pid-file ...".
 
 ## Common POSIX paths
 
     USER_DIR_LINUX="\$HOME/.local/share/godot/app_userdata/MCP Test Project"
     USER_DIR_MAC="\$HOME/Library/Application Support/Godot/app_userdata/MCP Test Project"
     USER_DIR="\$USER_DIR_LINUX"
-    PIDFILE="\$USER_DIR/godot_ai_server.pid"
+    PIDFILE="\$USER_DIR/runtime_studio_server.pid"
 
     EDITOR_SETTINGS_LINUX="\$HOME/.config/godot/editor_settings-4.6.tres"
     EDITOR_SETTINGS_MAC="\$HOME/Library/Application Support/Godot/editor_settings-4.6.tres"
@@ -691,23 +691,23 @@ the plugin and expect the plugin to treat the occupant as incompatible. As
 of the strict-version-match change, this is the behavior in both dev and
 user modes — \`_server_version_compatibility\` only returns compatible on
 an exact match. Earlier versions of this matrix asked you to set
-\`GODOT_AI_MODE=user\` from a dev checkout to bypass a lenient dev-mode
+\`RUNTIME_STUDIO_MODE=user\` from a dev checkout to bypass a lenient dev-mode
 branch; that branch is gone, so no override is needed for the
-version-mismatch scenarios. \`GODOT_AI_MODE\` and the dock's Mode override
+version-mismatch scenarios. \`RUNTIME_STUDIO_MODE\` and the dock's Mode override
 still control update-check behavior (whether the yellow Update banner can
 appear).
 
-The dock dropdown persists as the EditorSetting \`godot_ai/mode_override\`
+The dock dropdown persists as the EditorSetting \`runtime_studio/mode_override\`
 and **wins over the env var** — \`mode_override()\` reads the EditorSetting
-first, and only falls back to \`GODOT_AI_MODE\` when the dropdown is
+first, and only falls back to \`RUNTIME_STUDIO_MODE\` when the dropdown is
 "Auto"/unset. If you previously left the dropdown on "Force dev" or
 "Force user", the env var on the launch line will silently do nothing.
 Either set the dropdown back to "Auto" via the dock UI before relaunching,
-or close Godot and remove the \`godot_ai/mode_override = "..."\` line from
+or close Godot and remove the \`runtime_studio/mode_override = "..."\` line from
 \$EDITOR_SETTINGS (POSIX) / editor_settings-4.6.tres (Windows).
 
 Scenarios 6 and 7 don't need user mode forced — scenario 6's occupant is
-not godot-ai (no version is even returned), and scenario 7 deliberately
+not runtime-studio-godot (no version is even returned), and scenario 7 deliberately
 exercises the compatible-adoption path so dev-mode is harmless there.
 
 ## Scenario 1: Windows v2.2.0 orphan recovery
@@ -721,18 +721,18 @@ Use PowerShell. This tests the legacy-pidfile proof tier that motivated the PR.
     )
     \$ed = \$edCandidates | Where-Object { Test-Path -LiteralPath \$_ } | Select-Object -First 1
     Copy-Item -LiteralPath \$ed -Destination ("\$ed.bak-" + (Get-Date -Format yyyyMMdd-HHmmss))
-    # Close Godot, set godot_ai/http_port=8000 and godot_ai/ws_port=9500.
+    # Close Godot, set runtime_studio/http_port=8000 and runtime_studio/ws_port=9500.
     # Remove or zero:
-    # godot_ai/managed_server_pid
-    # godot_ai/managed_server_version
-    # godot_ai/managed_server_ws_port
+    # runtime_studio/managed_server_pid
+    # runtime_studio/managed_server_version
+    # runtime_studio/managed_server_ws_port
 
     Get-NetTCPConnection -LocalPort 8000 -ErrorAction SilentlyContinue
 
     \$repo = "$repo_win"
     \$python = Join-Path \$repo ".venv\\Scripts\\python.exe"
     if (!(Test-Path -LiteralPath \$python)) { \$python = "python" }
-    \$pidfile = "\$env:APPDATA\\Godot\\app_userdata\\MCP Test Project\\godot_ai_server.pid"
+    \$pidfile = "\$env:APPDATA\\Godot\\app_userdata\\MCP Test Project\\runtime_studio_server.pid"
     New-Item -Force -ItemType Directory (Split-Path \$pidfile) | Out-Null
 
     \$psi = [System.Diagnostics.ProcessStartInfo]::new()
@@ -740,7 +740,7 @@ Use PowerShell. This tests the legacy-pidfile proof tier that motivated the PR.
     \$psi.UseShellExecute = \$false
     \$psi.Environment["PYTHONPATH"] = "$orphan_pwsh_pp"
     foreach (\$arg in @(
-      "-m","godot_ai",
+      "-m","runtime_studio",
       "--transport","streamable-http",
       "--port","8000",
       "--ws-port","9500",
@@ -788,7 +788,7 @@ system binaries is high risk.
 
 This tests the managed_record proof tier.
 
-    PYTHONPATH="$posix_orphan_pp" python3 -m godot_ai \\
+    PYTHONPATH="$posix_orphan_pp" python3 -m runtime_studio \\
       --transport streamable-http --port 8000 --ws-port 9500 \\
       --pid-file "\$PIDFILE" --fake-version 2.1.0 &
     SIM_PID=\$!
@@ -796,11 +796,11 @@ This tests the managed_record proof tier.
 
 Close Godot and add or replace these lines in \$EDITOR_SETTINGS:
 
-    godot_ai/http_port = 8000
-    godot_ai/ws_port = 9500
-    godot_ai/managed_server_pid = <SIM_PID>
-    godot_ai/managed_server_version = "2.1.0"
-    godot_ai/managed_server_ws_port = 9500
+    runtime_studio/http_port = 8000
+    runtime_studio/ws_port = 9500
+    runtime_studio/managed_server_pid = <SIM_PID>
+    runtime_studio/managed_server_version = "2.1.0"
+    runtime_studio/managed_server_ws_port = 9500
 
 Then launch:
 
@@ -831,13 +831,13 @@ plugin stubs.
 ## Scenario 5: Status-name-only occupant safety
 
 This proves auto-kill is not triggered when the only evidence is a status
-endpoint returning name=godot-ai. Use a deliberately-mismatched
+endpoint returning name=runtime-studio-godot. Use a deliberately-mismatched
 \`--fake-version\` so a dev checkout in user mode treats the occupant as
 incompatible (matching versions would be a compatible-adoption test, see
 scenario 7).
 
     rm -f "\$PIDFILE"
-    # Close Godot, then remove godot_ai/managed_server_* from \$EDITOR_SETTINGS.
+    # Close Godot, then remove runtime_studio/managed_server_* from \$EDITOR_SETTINGS.
 
     PYTHONPATH="$posix_status_pp" python3 -m http_status_only --fake-version 2.1.0 &
     SIM_PID=\$!
@@ -864,7 +864,7 @@ After clicking Restart in the dock:
 ## Scenario 6: Non-godot occupant safety
 
     rm -f "\$PIDFILE"
-    # Close Godot, then remove godot_ai/managed_server_* from \$EDITOR_SETTINGS.
+    # Close Godot, then remove runtime_studio/managed_server_* from \$EDITOR_SETTINGS.
 
     python3 -m http.server 8000 &
     SIM_PID=\$!
@@ -890,7 +890,7 @@ Start the real current-version server outside the editor:
     script/serve-this-worktree &
     SERVER_PID=\$!
     sleep 1
-    curl -s http://127.0.0.1:8000/godot-ai/status
+    curl -s http://127.0.0.1:8000/runtime-studio-godot/status
 
     "\$GODOT" --editor --path "\$PROJECT" 2>&1 | tee /tmp/mcp-editor.log
 
@@ -899,7 +899,7 @@ Windows simulator equivalent for a compatible external current server:
     \$repo = "$repo_win"
     \$python = Join-Path \$repo ".venv\\Scripts\\python.exe"
     if (!(Test-Path -LiteralPath \$python)) { \$python = "python" }
-    \$pidfile = "\$env:APPDATA\\Godot\\app_userdata\\MCP Test Project\\godot_ai_server.pid"
+    \$pidfile = "\$env:APPDATA\\Godot\\app_userdata\\MCP Test Project\\runtime_studio_server.pid"
 
     \$psi = [System.Diagnostics.ProcessStartInfo]::new()
     \$psi.FileName = \$python
@@ -910,7 +910,7 @@ Windows simulator equivalent for a compatible external current server:
     }
     \$server = [System.Diagnostics.Process]::Start(\$psi)
 
-The \`--fake-version\` value is read from \`plugin/addons/godot_ai/plugin.cfg\`
+The \`--fake-version\` value is read from \`plugin/addons/runtime_studio/plugin.cfg\`
 on each \`script/manual-orphan-test instructions\` run so this scenario
 genuinely exercises compatible adoption against the current plugin.
 
@@ -920,7 +920,7 @@ Pass criteria:
 - External adoption logs the observed owner PID, while managed ownership remains unset.
 - Dock is green with no banner and no Restart button.
 - Port 8000 is still held by \$SERVER_PID or \$server.Id.
-- Dock status includes actual_name=godot-ai.
+- Dock status includes actual_name=runtime-studio-godot.
 
 ## Recommended order
 
@@ -931,7 +931,7 @@ If a scenario fails, capture:
 
 - /tmp/mcp-editor.log
 - contents of \$PIDFILE
-- grep godot_ai/managed_server "\$EDITOR_SETTINGS"
+- grep runtime_studio/managed_server "\$EDITOR_SETTINGS"
 - script/manual-orphan-test preflight
 - git diff --stat
 EOF
@@ -942,7 +942,7 @@ usage() {
 Usage: script/manual-orphan-test [command]
 
 Commands:
-  setup         Write the fake godot_ai and status-only simulator packages.
+  setup         Write the fake runtime_studio and status-only simulator packages.
   instructions Print the manual scenario matrix.
   sanity       Run a short orphan simulator status/cmdline check on port 8000.
   paths        Print the resolved simulator paths.
@@ -952,7 +952,7 @@ Commands:
 Default: setup, then print instructions.
 
 Environment:
-  ORPHAN_SIM_ROOT       Override the fake godot_ai package root.
+  ORPHAN_SIM_ROOT       Override the fake runtime_studio package root.
   STATUS_ONLY_SIM_ROOT  Override the fake status-only package root.
   PYTHON                Python executable for sanity checks.
 EOF

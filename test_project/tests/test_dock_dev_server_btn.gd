@@ -7,7 +7,7 @@ extends McpTestSuite
 ##  - `_dev_stop_btn_state(dev_running)` — gates the "✕" stop affordance.
 ## Static helpers so the truth table can be verified without a real plugin.
 
-const McpDockScript = preload("res://addons/godot_ai/mcp_dock.gd")
+const McpDockScript = preload("res://addons/runtime_studio/mcp_dock.gd")
 
 
 func suite_name() -> String:

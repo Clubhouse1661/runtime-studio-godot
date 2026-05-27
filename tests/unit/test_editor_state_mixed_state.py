@@ -2,7 +2,7 @@
 
 The plugin's `update_mixed_state.gd` scanner attaches a structured
 `mixed_state` Dictionary to the GDScript `get_editor_state` response when
-`addons/godot_ai/` contains `*.update_backup` files left behind by a
+`addons/runtime_studio/` contains `*.update_backup` files left behind by a
 self-update whose rollback couldn't restore the previous addon contents
 (`UpdateReloadRunner.InstallStatus.FAILED_MIXED`). These tests pin the
 Python-side passthrough so an MCP agent observing the field can rely on
@@ -14,9 +14,9 @@ by `test_project/tests/test_update_mixed_state.gd`.
 
 from __future__ import annotations
 
-from godot_ai.handlers import editor as editor_handlers
-from godot_ai.runtime.direct import DirectRuntime
-from godot_ai.sessions.registry import Session, SessionRegistry
+from runtime_studio.handlers import editor as editor_handlers
+from runtime_studio.runtime.direct import DirectRuntime
+from runtime_studio.sessions.registry import Session, SessionRegistry
 
 
 class _EditorStateClient:
@@ -78,15 +78,15 @@ async def test_editor_state_passes_through_mixed_state_diagnostic():
     handler must surface every field of the structured diagnostic so an
     MCP agent (or the dock crash banner consumer) can render it."""
     mixed = {
-        "addon_dir": "res://addons/godot_ai/",
+        "addon_dir": "res://addons/runtime_studio/",
         "backup_files": [
-            "res://addons/godot_ai/handlers/scene_handler.gd.update_backup",
-            "res://addons/godot_ai/plugin.gd.update_backup",
+            "res://addons/runtime_studio/handlers/scene_handler.gd.update_backup",
+            "res://addons/runtime_studio/plugin.gd.update_backup",
         ],
         "backup_count": 2,
         "truncated": False,
         "message": (
-            "Self-update rollback failed; addons/godot_ai/ contains a mix"
+            "Self-update rollback failed; addons/runtime_studio/ contains a mix"
             " of old and new files. Restore the addon from your VCS or a"
             " fresh release ZIP, then delete the listed *.update_backup"
             " files."
@@ -104,11 +104,11 @@ async def test_editor_state_passes_through_mixed_state_diagnostic():
     ## Spot-check structural keys so a future field rename in the
     ## scanner can't silently drop one downstream.
     surfaced = result["mixed_state"]
-    assert surfaced["addon_dir"] == "res://addons/godot_ai/"
+    assert surfaced["addon_dir"] == "res://addons/runtime_studio/"
     assert len(surfaced["backup_files"]) == 2
     assert surfaced["backup_count"] == 2
     assert surfaced["truncated"] is False
-    assert "addons/godot_ai/" in surfaced["message"]
+    assert "addons/runtime_studio/" in surfaced["message"]
 
 
 async def test_editor_state_passes_through_truncated_mixed_state():
@@ -116,11 +116,13 @@ async def test_editor_state_passes_through_truncated_mixed_state():
     by the scanner. Pin that the truncated flag still passes through so
     the agent knows the list isn't exhaustive."""
     mixed = {
-        "addon_dir": "res://addons/godot_ai/",
-        "backup_files": [f"res://addons/godot_ai/file_{i}.gd.update_backup" for i in range(200)],
+        "addon_dir": "res://addons/runtime_studio/",
+        "backup_files": [
+            f"res://addons/runtime_studio/file_{i}.gd.update_backup" for i in range(200)
+        ],
         "backup_count": 200,
         "truncated": True,
-        "message": "Self-update rollback failed; addons/godot_ai/ ...",
+        "message": "Self-update rollback failed; addons/runtime_studio/ ...",
     }
     payload = dict(_BASE_PAYLOAD)
     payload["mixed_state"] = mixed

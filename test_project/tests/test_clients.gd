@@ -1,8 +1,8 @@
 @tool
 extends McpTestSuite
 
-const ClientHandler := preload("res://addons/godot_ai/handlers/client_handler.gd")
-const ClientBaseScript := preload("res://addons/godot_ai/clients/_base.gd")
+const ClientHandler := preload("res://addons/runtime_studio/handlers/client_handler.gd")
+const ClientBaseScript := preload("res://addons/runtime_studio/clients/_base.gd")
 
 ## Tests for the client configuration registry + strategies.
 ##
@@ -181,7 +181,7 @@ func test_manual_command_escapes_backslashes_in_paths() -> void:
 		"hint": "say \"hello\"\nworld",
 	}
 
-	var manual := McpManualCommand.build(client, "godot-ai", "http://x", "/tmp/m.json")
+	var manual := McpManualCommand.build(client, "runtime-studio-godot", "http://x", "/tmp/m.json")
 	# Extract the JSON object body — everything from the first `{` after the
 	# entry key onwards to the matching trailing `}`.
 	var first_brace := manual.find("{")
@@ -233,11 +233,11 @@ func test_server_launch_mode_agrees_with_get_server_command() -> void:
 		assert_true(mode != "unknown", "Non-empty command must map to a concrete mode, got %s" % mode)
 
 
-func test_find_worktree_src_dir_locates_sibling_src_godot_ai() -> void:
+func test_find_worktree_src_dir_locates_sibling_src_runtime_studio() -> void:
 	var root := _scratch_dir.path_join("fake_worktree")
-	var godot_ai := root.path_join("src/godot_ai")
+	var runtime_studio := root.path_join("src/runtime_studio")
 	var nested := root.path_join("test_project/addons/deep")
-	DirAccess.make_dir_recursive_absolute(godot_ai)
+	DirAccess.make_dir_recursive_absolute(runtime_studio)
 	DirAccess.make_dir_recursive_absolute(nested)
 
 	var expected := root.path_join("src")
@@ -248,7 +248,7 @@ func test_find_worktree_src_dir_locates_sibling_src_godot_ai() -> void:
 	DirAccess.remove_absolute(nested)
 	DirAccess.remove_absolute(root.path_join("test_project/addons"))
 	DirAccess.remove_absolute(root.path_join("test_project"))
-	DirAccess.remove_absolute(godot_ai)
+	DirAccess.remove_absolute(runtime_studio)
 	DirAccess.remove_absolute(root.path_join("src"))
 	DirAccess.remove_absolute(root)
 
@@ -262,7 +262,7 @@ func test_find_worktree_src_dir_returns_empty_when_no_src_on_path() -> void:
 
 
 func test_find_worktree_src_dir_ignores_unrelated_src_directory() -> void:
-	## An unrelated project's `src/` (no `godot_ai/` child) must not match —
+	## An unrelated project's `src/` (no `runtime_studio/` child) must not match —
 	## otherwise a worktree launched inside a polyglot repo would get a
 	## spurious PYTHONPATH override pointing at the wrong tree.
 	var root := _scratch_dir.path_join("fake_other_project")
@@ -273,46 +273,46 @@ func test_find_worktree_src_dir_ignores_unrelated_src_directory() -> void:
 	DirAccess.remove_absolute(root)
 
 
-# ----- dev-venv detection requires sibling src/godot_ai -----
+# ----- dev-venv detection requires sibling src/runtime_studio -----
 #
 # `_find_venv_python` used to accept any `.venv/bin/python` it found while
 # walking up from `res://` — so a user with `~/.venv` (from an unrelated
-# Python project) got their venv picked up, `python -m godot_ai` failed with
+# Python project) got their venv picked up, `python -m runtime_studio` failed with
 # ModuleNotFoundError ~5s in, and the reconnect logic looped forever. These
-# tests lock in the new rule: require a sibling `src/godot_ai/` in the same
-# parent dir before treating a `.venv` as a godot-ai dev venv.
+# tests lock in the new rule: require a sibling `src/runtime_studio/` in the same
+# parent dir before treating a `.venv` as a runtime-studio-godot dev venv.
 
 
-func test_find_venv_python_rejects_venv_without_godot_ai_src() -> void:
+func test_find_venv_python_rejects_venv_without_runtime_studio_src() -> void:
 	## The money test. Reproduces the reported bug scenario: a user HOME
-	## with `~/.venv/` from a data-science side project and no `src/godot_ai/`
+	## with `~/.venv/` from a data-science side project and no `src/runtime_studio/`
 	## anywhere on the path. The plugin must fall through to the uvx tier
 	## instead of spawning the wrong interpreter.
 	var root := _scratch_dir.path_join("fake_user_home")
 	var venv_python := root.path_join(_venv_python_relpath())
 	DirAccess.make_dir_recursive_absolute(venv_python.get_base_dir())
 	_touch_file(venv_python)
-	assert_eq(McpClientConfigurator._find_venv_python_in(root), "", "Plain .venv with no sibling src/godot_ai/ must be rejected")
+	assert_eq(McpClientConfigurator._find_venv_python_in(root), "", "Plain .venv with no sibling src/runtime_studio/ must be rejected")
 	DirAccess.remove_absolute(venv_python)
 	DirAccess.remove_absolute(venv_python.get_base_dir())
 	DirAccess.remove_absolute(root.path_join(".venv"))
 	DirAccess.remove_absolute(root)
 
 
-func test_find_venv_python_accepts_venv_with_godot_ai_src() -> void:
-	## Positive case: real godot-ai dev checkout has both `.venv/` and
-	## `src/godot_ai/` as siblings at the worktree root. Both present →
+func test_find_venv_python_accepts_venv_with_runtime_studio_src() -> void:
+	## Positive case: real runtime-studio-godot dev checkout has both `.venv/` and
+	## `src/runtime_studio/` as siblings at the worktree root. Both present →
 	## return the venv python path.
 	var root := _scratch_dir.path_join("fake_dev_checkout")
 	var venv_python := root.path_join(_venv_python_relpath())
 	DirAccess.make_dir_recursive_absolute(venv_python.get_base_dir())
 	_touch_file(venv_python)
-	DirAccess.make_dir_recursive_absolute(root.path_join("src/godot_ai"))
+	DirAccess.make_dir_recursive_absolute(root.path_join("src/runtime_studio"))
 	assert_eq(McpClientConfigurator._find_venv_python_in(root), venv_python)
 	DirAccess.remove_absolute(venv_python)
 	DirAccess.remove_absolute(venv_python.get_base_dir())
 	DirAccess.remove_absolute(root.path_join(".venv"))
-	DirAccess.remove_absolute(root.path_join("src/godot_ai"))
+	DirAccess.remove_absolute(root.path_join("src/runtime_studio"))
 	DirAccess.remove_absolute(root.path_join("src"))
 	DirAccess.remove_absolute(root)
 
@@ -326,12 +326,12 @@ func test_find_venv_python_walks_up_from_nested_start_dir() -> void:
 	DirAccess.make_dir_recursive_absolute(deep)
 	DirAccess.make_dir_recursive_absolute(venv_python.get_base_dir())
 	_touch_file(venv_python)
-	DirAccess.make_dir_recursive_absolute(root.path_join("src/godot_ai"))
+	DirAccess.make_dir_recursive_absolute(root.path_join("src/runtime_studio"))
 	assert_eq(McpClientConfigurator._find_venv_python_in(deep), venv_python)
 	DirAccess.remove_absolute(venv_python)
 	DirAccess.remove_absolute(venv_python.get_base_dir())
 	DirAccess.remove_absolute(root.path_join(".venv"))
-	DirAccess.remove_absolute(root.path_join("src/godot_ai"))
+	DirAccess.remove_absolute(root.path_join("src/runtime_studio"))
 	DirAccess.remove_absolute(root.path_join("src"))
 	DirAccess.remove_absolute(deep)
 	DirAccess.remove_absolute(root.path_join("test_project/addons"))
@@ -340,20 +340,20 @@ func test_find_venv_python_walks_up_from_nested_start_dir() -> void:
 
 
 func test_find_venv_python_rejects_when_only_src_exists() -> void:
-	## Complement of the first test: `src/godot_ai/` present but no `.venv/`.
+	## Complement of the first test: `src/runtime_studio/` present but no `.venv/`.
 	## Could happen if a user copied the source tree without running setup.
 	## Nothing to return — the helper is a venv locator, not a src locator.
 	var root := _scratch_dir.path_join("fake_src_only")
-	DirAccess.make_dir_recursive_absolute(root.path_join("src/godot_ai"))
+	DirAccess.make_dir_recursive_absolute(root.path_join("src/runtime_studio"))
 	assert_eq(McpClientConfigurator._find_venv_python_in(root), "")
-	DirAccess.remove_absolute(root.path_join("src/godot_ai"))
+	DirAccess.remove_absolute(root.path_join("src/runtime_studio"))
 	DirAccess.remove_absolute(root.path_join("src"))
 	DirAccess.remove_absolute(root)
 
 
 func test_uvx_server_command_uses_exact_pin_not_tilde() -> void:
 	## Regression guard for #133: the uvx branch of get_server_command must
-	## pin godot-ai with `==<version>`, not `~=<minor>`. With the tilde
+	## pin runtime-studio-godot with `==<version>`, not `~=<minor>`. With the tilde
 	## constraint, uvx would reuse a cached tool env that matched the
 	## minor — so an install first-spawning 1.2.0 would keep using 1.2.0
 	## after 1.2.1/1.2.2 landed. Exact pinning makes the cache key
@@ -369,10 +369,10 @@ func test_uvx_server_command_uses_exact_pin_not_tilde() -> void:
 	if McpClientConfigurator.get_server_launch_mode() == "uvx":
 		var has_exact_pin := false
 		for arg in cmd:
-			if str(arg).contains("godot-ai==") and str(arg).contains(McpClientConfigurator.get_plugin_version()):
+			if str(arg).contains("runtime-studio-godot==") and str(arg).contains(McpClientConfigurator.get_plugin_version()):
 				has_exact_pin = true
 				break
-		assert_true(has_exact_pin, "uvx tier command should contain godot-ai==<plugin_version>; got %s" % str(cmd))
+		assert_true(has_exact_pin, "uvx tier command should contain runtime-studio-godot==<plugin_version>; got %s" % str(cmd))
 
 
 # ----- mode override + symlink safety -----
@@ -407,27 +407,27 @@ func _restore_mode_override_setting(prior: Variant) -> void:
 
 func test_mode_override_returns_empty_when_unset() -> void:
 	var prior_setting: Variant = _clear_mode_override_setting()
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
-	OS.unset_environment("GODOT_AI_MODE")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
+	OS.unset_environment("RUNTIME_STUDIO_MODE")
 	assert_eq(McpClientConfigurator.mode_override(), "")
 	if not prior_env.is_empty():
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 	_restore_mode_override_setting(prior_setting)
 
 
 func test_mode_override_normalises_case_and_whitespace() -> void:
 	var prior_setting: Variant = _clear_mode_override_setting()
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
-	OS.set_environment("GODOT_AI_MODE", "  USER  ")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "  USER  ")
 	assert_eq(McpClientConfigurator.mode_override(), "user")
-	OS.set_environment("GODOT_AI_MODE", "Dev")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "Dev")
 	assert_eq(McpClientConfigurator.mode_override(), "dev")
-	OS.set_environment("GODOT_AI_MODE", "whatever")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "whatever")
 	assert_eq(McpClientConfigurator.mode_override(), "", "unknown values fall back to auto")
 	if prior_env.is_empty():
-		OS.unset_environment("GODOT_AI_MODE")
+		OS.unset_environment("RUNTIME_STUDIO_MODE")
 	else:
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 	_restore_mode_override_setting(prior_setting)
 
 
@@ -437,25 +437,25 @@ func test_is_dev_checkout_forced_user_mode() -> void:
 	## update-check path untestable from dev. With the override, the flow
 	## can be exercised end-to-end.
 	var prior_setting: Variant = _clear_mode_override_setting()
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
-	OS.set_environment("GODOT_AI_MODE", "user")
-	assert_false(McpClientConfigurator.is_dev_checkout(), "GODOT_AI_MODE=user must force user mode")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "user")
+	assert_false(McpClientConfigurator.is_dev_checkout(), "RUNTIME_STUDIO_MODE=user must force user mode")
 	if prior_env.is_empty():
-		OS.unset_environment("GODOT_AI_MODE")
+		OS.unset_environment("RUNTIME_STUDIO_MODE")
 	else:
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 	_restore_mode_override_setting(prior_setting)
 
 
 func test_is_dev_checkout_forced_dev_mode() -> void:
 	var prior_setting: Variant = _clear_mode_override_setting()
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
-	OS.set_environment("GODOT_AI_MODE", "dev")
-	assert_true(McpClientConfigurator.is_dev_checkout(), "GODOT_AI_MODE=dev must force dev mode")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "dev")
+	assert_true(McpClientConfigurator.is_dev_checkout(), "RUNTIME_STUDIO_MODE=dev must force dev mode")
 	if prior_env.is_empty():
-		OS.unset_environment("GODOT_AI_MODE")
+		OS.unset_environment("RUNTIME_STUDIO_MODE")
 	else:
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 	_restore_mode_override_setting(prior_setting)
 
 
@@ -467,8 +467,8 @@ func test_get_server_command_forced_user_skips_dev_venv() -> void:
 	## the misidentified venv. Now flipping the override actually changes
 	## what gets spawned.
 	var prior_setting: Variant = _clear_mode_override_setting()
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
-	OS.set_environment("GODOT_AI_MODE", "user")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "user")
 
 	assert_true(McpClientConfigurator.get_server_launch_mode() != "dev_venv", "mode=user must never resolve to dev_venv")
 
@@ -479,20 +479,20 @@ func test_get_server_command_forced_user_skips_dev_venv() -> void:
 		assert_false(is_venv_python, "mode=user must not spawn a .venv python binary (got: %s)" % str(cmd))
 
 	if prior_env.is_empty():
-		OS.unset_environment("GODOT_AI_MODE")
+		OS.unset_environment("RUNTIME_STUDIO_MODE")
 	else:
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 	_restore_mode_override_setting(prior_setting)
 
 
 func test_addons_dir_is_symlink_detects_canonical_layout() -> void:
-	## `test_project/addons/godot_ai` is committed as a symlink
-	## (git mode 120000) pointing at `plugin/addons/godot_ai`, so the
+	## `test_project/addons/runtime_studio` is committed as a symlink
+	## (git mode 120000) pointing at `plugin/addons/runtime_studio`, so the
 	## data-safety check must resolve that layout to `true`. If this
 	## fails, either the symlink didn't survive the checkout (git not
 	## preserving symlinks on the test platform) or DirAccess.is_link()
 	## behaves unexpectedly — both are real bugs worth surfacing here.
-	assert_true(McpClientConfigurator.addons_dir_is_symlink(), "res://addons/godot_ai is committed as a symlink; addons_dir_is_symlink() should report true")
+	assert_true(McpClientConfigurator.addons_dir_is_symlink(), "res://addons/runtime_studio is committed as a symlink; addons_dir_is_symlink() should report true")
 
 
 func test_dropdown_flip_propagates_to_is_dev_checkout() -> void:
@@ -509,8 +509,8 @@ func test_dropdown_flip_propagates_to_is_dev_checkout() -> void:
 		return
 	var had_setting := es.has_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING)
 	var prior_setting: Variant = es.get_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING) if had_setting else null
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
-	OS.unset_environment("GODOT_AI_MODE")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
+	OS.unset_environment("RUNTIME_STUDIO_MODE")
 
 	# Dropdown=user → is_dev_checkout false (overrides heuristic in dev env,
 	# matches heuristic in CI — either way, must be false).
@@ -528,7 +528,7 @@ func test_dropdown_flip_propagates_to_is_dev_checkout() -> void:
 	else:
 		es.set_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING, "")
 	if not prior_env.is_empty():
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 
 
 func test_editor_setting_beats_env_var() -> void:
@@ -541,9 +541,9 @@ func test_editor_setting_beats_env_var() -> void:
 		return
 	var had_setting := es.has_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING)
 	var prior_setting: Variant = es.get_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING) if had_setting else null
-	var prior_env := OS.get_environment("GODOT_AI_MODE")
+	var prior_env := OS.get_environment("RUNTIME_STUDIO_MODE")
 
-	OS.set_environment("GODOT_AI_MODE", "dev")
+	OS.set_environment("RUNTIME_STUDIO_MODE", "dev")
 	es.set_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING, "user")
 	assert_eq(McpClientConfigurator.mode_override(), "user", "EditorSetting=user must override env=dev")
 
@@ -558,9 +558,9 @@ func test_editor_setting_beats_env_var() -> void:
 		# which `mode_override()` treats identically to unset.
 		es.set_setting(McpClientConfigurator.MODE_OVERRIDE_SETTING, "")
 	if prior_env.is_empty():
-		OS.unset_environment("GODOT_AI_MODE")
+		OS.unset_environment("RUNTIME_STUDIO_MODE")
 	else:
-		OS.set_environment("GODOT_AI_MODE", prior_env)
+		OS.set_environment("RUNTIME_STUDIO_MODE", prior_env)
 
 
 func test_is_symlink_detects_real_symlink() -> void:
@@ -695,24 +695,24 @@ func test_json_strategy_round_trip() -> void:
 	_remove_if_exists(path)
 	var client := _make_test_json_client(path)
 
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok")
 	assert_true(FileAccess.file_exists(path))
 
-	var status := McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var status := McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(status, McpClient.Status.CONFIGURED)
 
 	# A wrong URL is drift, not "never configured" — the user re-configured
 	# at one point but the stored URL is now stale (most commonly because
-	# they changed `godot_ai/http_port`). Surfacing it as a distinct status
+	# they changed `runtime_studio/http_port`). Surfacing it as a distinct status
 	# lets the dock render an amber "stale" banner instead of conflating
 	# drift with a brand-new install.
-	var wrong_status := McpJsonStrategy.check_status(client, "godot-ai", "http://wrong/")
+	var wrong_status := McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://wrong/")
 	assert_eq(wrong_status, McpClient.Status.CONFIGURED_MISMATCH)
 
-	var removed := McpJsonStrategy.remove(client, "godot-ai")
+	var removed := McpJsonStrategy.remove(client, "runtime-studio-godot")
 	assert_eq(removed.get("status"), "ok")
-	assert_eq(McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"), McpClient.Status.NOT_CONFIGURED)
+	assert_eq(McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"), McpClient.Status.NOT_CONFIGURED)
 
 
 func test_json_strategy_preserves_other_servers() -> void:
@@ -724,7 +724,7 @@ func test_json_strategy_preserves_other_servers() -> void:
 	f.close()
 
 	var client := _make_test_json_client(path)
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok")
 
 	var content_file := FileAccess.open(path, FileAccess.READ)
@@ -733,13 +733,13 @@ func test_json_strategy_preserves_other_servers() -> void:
 	var parsed = JSON.parse_string(content)
 	assert_true(parsed.has("mcpServers"))
 	assert_true(parsed["mcpServers"].has("someone-else"), "Existing entry was wiped")
-	assert_true(parsed["mcpServers"].has("godot-ai"), "Our entry not added")
+	assert_true(parsed["mcpServers"].has("runtime-studio-godot"), "Our entry not added")
 
 
 func test_json_strategy_refuses_to_overwrite_unparseable_file() -> void:
 	## Regression: if the config file exists but we can't parse it (trailing
 	## comma, stray comment, truncated write), `configure()` used to silently
-	## fall back to `{}` and write only the godot-ai entry — wiping every
+	## fall back to `{}` and write only the runtime-studio-godot entry — wiping every
 	## other MCP the user had configured. Now it must refuse and surface an
 	## error so the user can inspect and recover.
 	var path := _scratch_dir.path_join("unparseable.json")
@@ -749,7 +749,7 @@ func test_json_strategy_refuses_to_overwrite_unparseable_file() -> void:
 	f.close()
 
 	var client := _make_test_json_client(path)
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "error", "Configure must error on unparseable JSON, not silently overwrite")
 	var msg: String = result.get("message", "")
 	assert_true(msg.find("Refusing to overwrite") >= 0, "Error message should flag refusal: %s" % msg)
@@ -773,7 +773,7 @@ func test_json_strategy_refuses_to_overwrite_non_object_root() -> void:
 	f.close()
 
 	var client := _make_test_json_client(path)
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "error")
 
 	var check_file := FileAccess.open(path, FileAccess.READ)
@@ -794,7 +794,7 @@ func test_json_strategy_tolerates_utf8_bom() -> void:
 	f.close()
 
 	var client := _make_test_json_client(path)
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok", "BOM-prefixed JSON should parse after strip")
 
 	var check_file := FileAccess.open(path, FileAccess.READ)
@@ -802,7 +802,7 @@ func test_json_strategy_tolerates_utf8_bom() -> void:
 	check_file.close()
 	assert_true(parsed is Dictionary and parsed.has("mcpServers"))
 	assert_true(parsed["mcpServers"].has("someone-else"), "Existing entry wiped after BOM parse recovery")
-	assert_true(parsed["mcpServers"].has("godot-ai"), "godot-ai entry not added")
+	assert_true(parsed["mcpServers"].has("runtime-studio-godot"), "runtime-studio-godot entry not added")
 
 
 func test_json_strategy_remove_refuses_unparseable_file() -> void:
@@ -815,7 +815,7 @@ func test_json_strategy_remove_refuses_unparseable_file() -> void:
 	f.close()
 
 	var client := _make_test_json_client(path)
-	var result := McpJsonStrategy.remove(client, "godot-ai")
+	var result := McpJsonStrategy.remove(client, "runtime-studio-godot")
 	assert_eq(result.get("status"), "error")
 
 	var check_file := FileAccess.open(path, FileAccess.READ)
@@ -833,21 +833,21 @@ func test_json_strategy_distinguishes_missing_entry_from_url_drift() -> void:
 
 	# 1. No file at all → NOT_CONFIGURED.
 	assert_eq(
-		McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.NOT_CONFIGURED,
 	)
 
 	# 2. Configure at port 8000 → CONFIGURED at the matching URL.
-	McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(
-		McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.CONFIGURED,
 	)
 
 	# 3. Same file, but the active URL has shifted (user changed http_port).
 	#    Entry still exists under the same name — drift, not absence.
 	assert_eq(
-		McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:9000/mcp"),
+		McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:9000/mcp"),
 		McpClient.Status.CONFIGURED_MISMATCH,
 	)
 
@@ -857,7 +857,7 @@ func test_json_strategy_distinguishes_missing_entry_from_url_drift() -> void:
 	f.store_string(JSON.stringify(seed))
 	f.close()
 	assert_eq(
-		McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.NOT_CONFIGURED,
 	)
 
@@ -876,9 +876,9 @@ func test_json_strategy_drift_with_bridge_entry() -> void:
 	client.server_key_path = PackedStringArray(["mcpServers"])
 	client.entry_uvx_bridge = McpClient.UvxBridge.FLAT
 
-	McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(
-		McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:9000/mcp"),
+		McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:9000/mcp"),
 		McpClient.Status.CONFIGURED_MISMATCH,
 	)
 
@@ -895,9 +895,9 @@ func test_json_strategy_supports_nested_key_path() -> void:
 	client.server_key_path = PackedStringArray(["mcp"])
 	client.entry_extra_fields = {"type": "remote"}
 
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok")
-	var status := McpJsonStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var status := McpJsonStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(status, McpClient.Status.CONFIGURED)
 
 
@@ -908,15 +908,15 @@ func test_toml_strategy_round_trip() -> void:
 	_remove_if_exists(path)
 	var client := _make_test_toml_client(path)
 
-	var result := McpTomlStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpTomlStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok")
 
-	var status := McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var status := McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(status, McpClient.Status.CONFIGURED)
 
-	var removed := McpTomlStrategy.remove(client, "godot-ai")
+	var removed := McpTomlStrategy.remove(client, "runtime-studio-godot")
 	assert_eq(removed.get("status"), "ok")
-	assert_eq(McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"), McpClient.Status.NOT_CONFIGURED)
+	assert_eq(McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"), McpClient.Status.NOT_CONFIGURED)
 
 
 func test_toml_strategy_distinguishes_missing_section_from_url_drift() -> void:
@@ -928,30 +928,30 @@ func test_toml_strategy_distinguishes_missing_section_from_url_drift() -> void:
 	var client := _make_test_toml_client(path)
 
 	assert_eq(
-		McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.NOT_CONFIGURED,
 	)
 
-	McpTomlStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	McpTomlStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(
-		McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.CONFIGURED,
 	)
 
 	# Drift: section still present (we never re-configured) but the active
 	# server URL has shifted underneath it.
 	assert_eq(
-		McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:9000/mcp"),
+		McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:9000/mcp"),
 		McpClient.Status.CONFIGURED_MISMATCH,
 	)
 
 	# Disabled section is also drift, not absence — the entry is there,
 	# the user just turned it off, and re-running Configure restores it.
 	var f := FileAccess.open(path, FileAccess.WRITE)
-	f.store_string("[mcp_servers.\"godot-ai\"]\nurl = \"http://127.0.0.1:8000/mcp\"\nenabled = false\n")
+	f.store_string("[mcp_servers.\"runtime-studio-godot\"]\nurl = \"http://127.0.0.1:8000/mcp\"\nenabled = false\n")
 	f.close()
 	assert_eq(
-		McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.CONFIGURED_MISMATCH,
 	)
 
@@ -963,14 +963,14 @@ func test_toml_strategy_preserves_other_sections() -> void:
 	f.close()
 
 	var client := _make_test_toml_client(path)
-	var result := McpTomlStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpTomlStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok")
 
 	var content_file := FileAccess.open(path, FileAccess.READ)
 	var content := content_file.get_as_text()
 	content_file.close()
 	assert_contains(content, "[other_section]")
-	assert_contains(content, "[mcp_servers.\"godot-ai\"]")
+	assert_contains(content, "[mcp_servers.\"runtime-studio-godot\"]")
 
 
 func test_toml_strategy_remove_tolerates_inline_comment_on_next_header() -> void:
@@ -983,7 +983,7 @@ func test_toml_strategy_remove_tolerates_inline_comment_on_next_header() -> void
 	var path := _scratch_dir.path_join("remove_inline_comment.toml")
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_string(
-		"[mcp_servers.\"godot-ai\"]\n" +
+		"[mcp_servers.\"runtime-studio-godot\"]\n" +
 		"url = \"http://127.0.0.1:8000/mcp\"\n" +
 		"enabled = true\n" +
 		"\n" +
@@ -993,15 +993,15 @@ func test_toml_strategy_remove_tolerates_inline_comment_on_next_header() -> void
 	f.close()
 
 	var client := _make_test_toml_client(path)
-	var removed := McpTomlStrategy.remove(client, "godot-ai")
+	var removed := McpTomlStrategy.remove(client, "runtime-studio-godot")
 	assert_eq(removed.get("status"), "ok")
 
 	var after_remove_file := FileAccess.open(path, FileAccess.READ)
 	var after_remove := after_remove_file.get_as_text()
 	after_remove_file.close()
 
-	assert_eq(after_remove.count("[mcp_servers.\"godot-ai\"]"), 0,
-		"godot-ai section must be removed:\n%s" % after_remove)
+	assert_eq(after_remove.count("[mcp_servers.\"runtime-studio-godot\"]"), 0,
+		"runtime-studio-godot section must be removed:\n%s" % after_remove)
 	assert_contains(after_remove, "[other_section]")
 	assert_contains(after_remove, "key = \"value\"")
 
@@ -1009,18 +1009,18 @@ func test_toml_strategy_remove_tolerates_inline_comment_on_next_header() -> void
 func test_toml_strategy_detects_bare_key_section_no_duplicate_on_reconfigure() -> void:
 	## Regression for the codex duplicate-key bug. TOML accepts bare keys
 	## [A-Za-z0-9_-]+ unquoted, so a hand-written or older-plugin
-	## [mcp_servers.godot-ai] section refers to the same logical key as
-	## the quoted [mcp_servers."godot-ai"] we emit. Reconfigure must
+	## [mcp_servers.runtime-studio-godot] section refers to the same logical key as
+	## the quoted [mcp_servers."runtime-studio-godot"] we emit. Reconfigure must
 	## update the bare-key section in place — appending a duplicate
 	## quoted section makes the file fail to parse.
 	var path := _scratch_dir.path_join("bare_key_codex.toml")
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	f.store_string(
-		"[mcp_servers.godot-ai]\n" +
+		"[mcp_servers.runtime-studio-godot]\n" +
 		"url = \"http://127.0.0.1:7000/mcp\"\n" +
 		"enabled = true\n" +
 		"\n" +
-		"[mcp_servers.godot-ai.tools.session_list]\n" +
+		"[mcp_servers.runtime-studio-godot.tools.session_list]\n" +
 		"approval_mode = \"approve\"\n"
 	)
 	f.close()
@@ -1030,55 +1030,55 @@ func test_toml_strategy_detects_bare_key_section_no_duplicate_on_reconfigure() -
 	## check_status must recognise the bare-key form (was reporting
 	## NOT_CONFIGURED, masking that an entry already existed).
 	assert_eq(
-		McpTomlStrategy.check_status(client, "godot-ai", "http://127.0.0.1:8000/mcp"),
+		McpTomlStrategy.check_status(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp"),
 		McpClient.Status.CONFIGURED_MISMATCH,
 		"bare-key section must be detected by check_status"
 	)
 
 	## configure must update the bare-key section in place. After the
-	## write there must be exactly one godot-ai section header (counting
+	## write there must be exactly one runtime-studio-godot section header (counting
 	## both bare and quoted forms) — anything else is the duplicate that
 	## breaks the user's TOML parser.
-	var result := McpTomlStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	var result := McpTomlStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(result.get("status"), "ok")
 
 	var content := FileAccess.open(path, FileAccess.READ).get_as_text()
-	var bare_count := content.count("[mcp_servers.godot-ai]\n")
-	var quoted_count := content.count("[mcp_servers.\"godot-ai\"]\n")
+	var bare_count := content.count("[mcp_servers.runtime-studio-godot]\n")
+	var quoted_count := content.count("[mcp_servers.\"runtime-studio-godot\"]\n")
 	assert_eq(bare_count + quoted_count, 1,
-		"exactly one godot-ai section must exist after reconfigure (bare=%d quoted=%d):\n%s" % [bare_count, quoted_count, content])
+		"exactly one runtime-studio-godot section must exist after reconfigure (bare=%d quoted=%d):\n%s" % [bare_count, quoted_count, content])
 
 	## The user's nested subtable customisation must survive — the
 	## strategy only owns the matched section, not its children.
-	assert_contains(content, "[mcp_servers.godot-ai.tools.session_list]")
+	assert_contains(content, "[mcp_servers.runtime-studio-godot.tools.session_list]")
 	assert_contains(content, "approval_mode = \"approve\"")
 
 	## remove must clean the bare-key form (was a silent no-op) AND the
 	## subtables under the namespace. Leaving subtables behind would
-	## keep mcp_servers.godot-ai implicitly defined, so a later
-	## configure rewriting [mcp_servers."godot-ai"] produces a
+	## keep mcp_servers.runtime-studio-godot implicitly defined, so a later
+	## configure rewriting [mcp_servers."runtime-studio-godot"] produces a
 	## duplicate-key TOML error — the same shape the original bug took.
-	var removed := McpTomlStrategy.remove(client, "godot-ai")
+	var removed := McpTomlStrategy.remove(client, "runtime-studio-godot")
 	assert_eq(removed.get("status"), "ok")
 	var after_remove := FileAccess.open(path, FileAccess.READ).get_as_text()
-	assert_eq(after_remove.count("[mcp_servers.godot-ai]\n"), 0,
+	assert_eq(after_remove.count("[mcp_servers.runtime-studio-godot]\n"), 0,
 		"remove must clean the bare-key parent section:\n%s" % after_remove)
-	assert_eq(after_remove.count("[mcp_servers.\"godot-ai\"]\n"), 0,
+	assert_eq(after_remove.count("[mcp_servers.\"runtime-studio-godot\"]\n"), 0,
 		"remove must clean the quoted-key parent section:\n%s" % after_remove)
-	assert_eq(after_remove.count("[mcp_servers.godot-ai.tools.session_list]"), 0,
+	assert_eq(after_remove.count("[mcp_servers.runtime-studio-godot.tools.session_list]"), 0,
 		"remove must clean subtables in the namespace:\n%s" % after_remove)
 	assert_eq(after_remove.count("approval_mode"), 0,
 		"subtable bodies must be removed too:\n%s" % after_remove)
 
 	## Round-trip: configure-after-remove must produce a clean,
-	## parseable file with exactly one godot-ai section.
-	var reconfigure := McpTomlStrategy.configure(client, "godot-ai", "http://127.0.0.1:8000/mcp")
+	## parseable file with exactly one runtime-studio-godot section.
+	var reconfigure := McpTomlStrategy.configure(client, "runtime-studio-godot", "http://127.0.0.1:8000/mcp")
 	assert_eq(reconfigure.get("status"), "ok")
 	var final_content := FileAccess.open(path, FileAccess.READ).get_as_text()
-	var final_bare := final_content.count("[mcp_servers.godot-ai]\n")
-	var final_quoted := final_content.count("[mcp_servers.\"godot-ai\"]\n")
+	var final_bare := final_content.count("[mcp_servers.runtime-studio-godot]\n")
+	var final_quoted := final_content.count("[mcp_servers.\"runtime-studio-godot\"]\n")
 	assert_eq(final_bare + final_quoted, 1,
-		"configure-after-remove must produce exactly one godot-ai section (bare=%d quoted=%d):\n%s" % [final_bare, final_quoted, final_content])
+		"configure-after-remove must produce exactly one runtime-studio-godot section (bare=%d quoted=%d):\n%s" % [final_bare, final_quoted, final_content])
 
 
 # ----- configure/remove verify-after-write (#201) -----
@@ -1417,7 +1417,7 @@ func test_claude_desktop_manual_command_includes_env_pin() -> void:
 	## inline-JSON shape so a future change to `_format_value` / `build_entry`
 	## that drops the env key fails CI.
 	var c := McpClientRegistry.get_by_id("claude_desktop")
-	var manual := McpManualCommand.build(c, "godot-ai", "http://x", "/tmp/cd.json")
+	var manual := McpManualCommand.build(c, "runtime-studio-godot", "http://x", "/tmp/cd.json")
 	assert_contains(manual, "\"env\":")
 	assert_contains(manual, "\"UV_LINK_MODE\": \"copy\"")
 
@@ -1431,7 +1431,7 @@ func test_claude_desktop_configure_preserves_existing_env_keys() -> void:
 	_remove_if_exists(path)
 	var pre_existing := {
 		"mcpServers": {
-			"godot-ai": {
+			"runtime-studio-godot": {
 				"command": "uvx",
 				"args": McpClient.mcp_proxy_bridge_args("http://old"),
 				"env": {
@@ -1454,13 +1454,13 @@ func test_claude_desktop_configure_preserves_existing_env_keys() -> void:
 	client.server_key_path = PackedStringArray(["mcpServers"])
 	client.entry_uvx_bridge = McpClient.UvxBridge.FLAT
 
-	var result := McpJsonStrategy.configure(client, "godot-ai", "http://new")
+	var result := McpJsonStrategy.configure(client, "runtime-studio-godot", "http://new")
 	assert_eq(result.get("status"), "ok")
 
 	var rf := FileAccess.open(path, FileAccess.READ)
 	var written = JSON.parse_string(rf.get_as_text())
 	rf.close()
-	var entry = written.get("mcpServers", {}).get("godot-ai", {})
+	var entry = written.get("mcpServers", {}).get("runtime-studio-godot", {})
 	var env = entry.get("env", {})
 	assert_eq(env.get("HTTP_PROXY", ""), "http://corp-proxy:3128", "HTTP_PROXY must be preserved across rewrite")
 	assert_eq(env.get("PYTHONUNBUFFERED", ""), "1", "PYTHONUNBUFFERED must be preserved across rewrite")
@@ -1546,7 +1546,7 @@ func test_roo_code_pins_streamable_http_transport() -> void:
 	var entry := McpJsonStrategy.build_entry(c, "http://x")
 	assert_eq(entry.get("type", ""), "streamable-http")
 	assert_eq(entry.get("url", ""), "http://x")
-	var manual := McpManualCommand.build(c, "godot-ai", "http://x", "/tmp/roo.json")
+	var manual := McpManualCommand.build(c, "runtime-studio-godot", "http://x", "/tmp/roo.json")
 	assert_contains(manual, "\"type\": \"streamable-http\"")
 
 
@@ -1576,7 +1576,7 @@ func test_cline_pins_streamable_http_transport() -> void:
 	var entry := McpJsonStrategy.build_entry(c, "http://x")
 	assert_eq(entry.get("type", ""), "streamableHttp")
 	assert_eq(entry.get("url", ""), "http://x")
-	var manual := McpManualCommand.build(c, "godot-ai", "http://x", "/tmp/cline.json")
+	var manual := McpManualCommand.build(c, "runtime-studio-godot", "http://x", "/tmp/cline.json")
 	assert_contains(manual, "\"type\": \"streamableHttp\"")
 
 
@@ -1606,7 +1606,7 @@ func test_kilo_code_pins_streamable_http_transport() -> void:
 	var entry := McpJsonStrategy.build_entry(c, "http://x")
 	assert_eq(entry.get("type", ""), "streamable-http")
 	assert_eq(entry.get("url", ""), "http://x")
-	var manual := McpManualCommand.build(c, "godot-ai", "http://x", "/tmp/kilo.json")
+	var manual := McpManualCommand.build(c, "runtime-studio-godot", "http://x", "/tmp/kilo.json")
 	assert_contains(manual, "\"type\": \"streamable-http\"")
 
 
@@ -1732,7 +1732,7 @@ func test_path_template_expand_home_falls_back_to_userprofile() -> void:
 	## exercised on every CI platform.
 	var saved_home := OS.get_environment("HOME")
 	var saved_userprofile := OS.get_environment("USERPROFILE")
-	var fake_userprofile := "/tmp/godot-ai-test-userprofile"
+	var fake_userprofile := "/tmp/runtime-studio-godot-test-userprofile"
 
 	OS.unset_environment("HOME")
 	OS.set_environment("USERPROFILE", fake_userprofile)
@@ -1740,7 +1740,7 @@ func test_path_template_expand_home_falls_back_to_userprofile() -> void:
 	var via_tilde := McpPathTemplate.expand("~/foo")
 	# Restore before asserting so a failure can't leak into later tests.
 	# Mirror the unset-when-saved-was-empty pattern used by the
-	# GODOT_AI_MODE tests above — `set_environment(var, "")` would
+	# RUNTIME_STUDIO_MODE tests above — `set_environment(var, "")` would
 	# define a new empty-valued env var rather than leave it unset.
 	if saved_home.is_empty():
 		OS.unset_environment("HOME")
@@ -1797,7 +1797,7 @@ func _assert_mcp_proxy_bridge_args(args: Variant, expected_url: String) -> void:
 
 func _assert_bridge_env_pin(entry: Variant) -> void:
 	## Every uvx-bridge entry must carry `env.UV_LINK_MODE=copy`. Without it,
-	## the running godot-ai server's `_pydantic_core.pyd` mapping locks the
+	## the running runtime-studio-godot server's `_pydantic_core.pyd` mapping locks the
 	## hard-linked copy under `builds-v0\.tmpXXXXXX\` on Windows and uvx's
 	## post-install cleanup fails — the symptom is a "pywin32 wheel invalid /
 	## file in use" error in Claude Desktop's MCP launcher with no working
@@ -1828,7 +1828,7 @@ func _make_test_toml_client(path: String) -> McpClient:
 	c.display_name = "TOML Test"
 	c.config_type = "toml"
 	c.path_template = {"darwin": path, "windows": path, "linux": path, "unix": path}
-	c.toml_section_path = PackedStringArray(["mcp_servers", "godot-ai"])
+	c.toml_section_path = PackedStringArray(["mcp_servers", "runtime-studio-godot"])
 	c.toml_body_template = PackedStringArray(["url = \"{url}\"", "enabled = true"])
 	return c
 

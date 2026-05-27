@@ -1,6 +1,6 @@
 """Loopback Host/Origin guard — DNS-rebinding mitigation (audit-v2 #1, #345).
 
-Covers the pure helpers in ``godot_ai.transport.origin_guard`` and the
+Covers the pure helpers in ``runtime_studio.transport.origin_guard`` and the
 ASGI middleware surface. The WebSocket-server side is exercised in
 ``tests/integration/test_websocket.py`` against a live ``websockets``
 server because the upgrade path runs inside the library, not in our
@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import pytest
 
-from godot_ai.transport.origin_guard import (
+from runtime_studio.transport.origin_guard import (
     LocalhostOnlyHTTPMiddleware,
     evaluate_loopback,
     is_allowed_host,
@@ -62,7 +62,7 @@ def test_bare_unbracketed_ipv6_loopback_rejected() -> None:
         "192.168.1.50",
         "10.0.0.1:8000",
         # Public DNS names that *resolve* to 127.0.0.1 but don't *match* it.
-        "godot-ai.test",
+        "runtime-studio-godot.test",
         "rebound.local:9500",
         # Empty / missing → reject; well-formed HTTP carries a Host.
         "",
@@ -123,7 +123,7 @@ def test_origin_null_rejected(null_origin: str) -> None:
         # The DNS-rebinding shape: browser-driven Origin is the attacker's domain.
         "https://attacker.example.com",
         "http://attacker.example.com:9500",
-        "https://godot-ai.test",
+        "https://runtime-studio-godot.test",
         # Schemes outside the HTTP/WS family — refuse rather than guess.
         "file:///home/user/index.html",
         "data:text/html;base64,PHNjcmlwdD4=",
@@ -153,7 +153,7 @@ def test_non_loopback_origins_rejected(origin: str) -> None:
         None,
         # Top-level navigation (user typed URL / clicked bookmark).
         "none",
-        # Same-origin fetch (e.g. our own /godot-ai/status from a loopback
+        # Same-origin fetch (e.g. our own /runtime-studio-godot/status from a loopback
         # browser context).
         "same-origin",
         # Case insensitivity per spec.
@@ -207,7 +207,7 @@ def test_evaluate_loopback_loopback_browser_passes() -> None:
 
 def test_evaluate_loopback_cross_site_subresource_rejected() -> None:
     """The Copilot-flagged liveness oracle: cross-origin <img> hits our
-    /godot-ai/status with a loopback Host and *no* Origin (no-cors mode).
+    /runtime-studio-godot/status with a loopback Host and *no* Origin (no-cors mode).
     Sec-Fetch-Site is the giveaway."""
     assert (
         evaluate_loopback(
@@ -386,7 +386,7 @@ async def test_middleware_rejects_origin_null() -> None:
 
 
 async def test_middleware_rejects_cross_origin_subresource() -> None:
-    """The /godot-ai/status liveness-oracle shape Copilot flagged: a
+    """The /runtime-studio-godot/status liveness-oracle shape Copilot flagged: a
     cross-origin <img> / <script> load arrives with a loopback Host
     and *no* Origin (no-cors mode) — but Sec-Fetch-Site reveals it."""
     middleware = LocalhostOnlyHTTPMiddleware(app=None)  # type: ignore[arg-type]

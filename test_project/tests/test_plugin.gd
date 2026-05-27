@@ -8,7 +8,7 @@ extends McpTestSuite
 ## `_should_retry_with_refresh` exercises (static-cache reads, pid-file
 ## I/O) is deliberately kept out of the helper under test.
 
-const GodotAiPlugin := preload("res://addons/godot_ai/plugin.gd")
+const RuntimeStudioPlugin := preload("res://addons/runtime_studio/plugin.gd")
 
 
 func suite_name() -> String:
@@ -19,16 +19,16 @@ func test_retry_fires_on_uvx_tier_with_no_pid_file() -> void:
 	## Classic stale-index scenario: uvx resolved the release to nothing,
 	## Python never ran (so no pid-file), and we haven't retried yet.
 	assert_true(
-		GodotAiPlugin._retry_with_refresh_allowed(false, "uvx", 0),
+		RuntimeStudioPlugin._retry_with_refresh_allowed(false, "uvx", 0),
 		"uvx tier + no pid-file + not retried must trigger the --refresh retry",
 	)
 
 
 func test_no_retry_on_dev_venv_tier() -> void:
-	## `--refresh` is a uvx-only flag. Dev-venv spawns `python -m godot_ai`,
+	## `--refresh` is a uvx-only flag. Dev-venv spawns `python -m runtime_studio`,
 	## which has no resolve step to refresh — retrying would be a no-op.
 	assert_false(
-		GodotAiPlugin._retry_with_refresh_allowed(false, "dev_venv", 0),
+		RuntimeStudioPlugin._retry_with_refresh_allowed(false, "dev_venv", 0),
 		"dev_venv tier must not attempt a --refresh retry",
 	)
 
@@ -36,7 +36,7 @@ func test_no_retry_on_dev_venv_tier() -> void:
 func test_no_retry_on_system_tier() -> void:
 	## System installs don't go through uvx either.
 	assert_false(
-		GodotAiPlugin._retry_with_refresh_allowed(false, "system", 0),
+		RuntimeStudioPlugin._retry_with_refresh_allowed(false, "system", 0),
 		"system tier must not attempt a --refresh retry",
 	)
 
@@ -45,7 +45,7 @@ func test_no_retry_when_already_retried() -> void:
 	## One-shot guard: once we've retried, subsequent spawn failures must
 	## fall through to CRASHED instead of looping on --refresh.
 	assert_false(
-		GodotAiPlugin._retry_with_refresh_allowed(true, "uvx", 0),
+		RuntimeStudioPlugin._retry_with_refresh_allowed(true, "uvx", 0),
 		"already-retried must skip even on uvx with no pid-file",
 	)
 
@@ -55,7 +55,7 @@ func test_no_retry_when_pid_file_present() -> void:
 	## Python-side crash, not a uvx resolve failure. `--refresh` won't
 	## help; the user needs the traceback in Godot's output log.
 	assert_false(
-		GodotAiPlugin._retry_with_refresh_allowed(false, "uvx", 12345),
+		RuntimeStudioPlugin._retry_with_refresh_allowed(false, "uvx", 12345),
 		"pid-file present means Python started — don't blame uvx",
 	)
 
@@ -91,33 +91,33 @@ func test_get_server_command_default_omits_refresh() -> void:
 
 func test_headless_launch_disables_mcp_by_default() -> void:
 	assert_true(
-		GodotAiPlugin._mcp_disabled_for_headless(PackedStringArray(["--headless", "--editor"]), "", ""),
+		RuntimeStudioPlugin._mcp_disabled_for_headless(PackedStringArray(["--headless", "--editor"]), "", ""),
 		"--headless must disable MCP startup by default"
 	)
 	assert_true(
-		GodotAiPlugin._mcp_disabled_for_headless(PackedStringArray(["--editor"]), "headless", ""),
+		RuntimeStudioPlugin._mcp_disabled_for_headless(PackedStringArray(["--editor"]), "headless", ""),
 		"headless DisplayServer must disable MCP startup by default"
 	)
 
 
 func test_headless_launch_allows_explicit_override() -> void:
 	assert_false(
-		GodotAiPlugin._mcp_disabled_for_headless(PackedStringArray(["--headless", "--editor"]), "headless", "1"),
-		"GODOT_AI_ALLOW_HEADLESS=1 must preserve CI/headless MCP sessions"
+		RuntimeStudioPlugin._mcp_disabled_for_headless(PackedStringArray(["--headless", "--editor"]), "headless", "1"),
+		"RUNTIME_STUDIO_ALLOW_HEADLESS=1 must preserve CI/headless MCP sessions"
 	)
 	assert_false(
-		GodotAiPlugin._mcp_disabled_for_headless(PackedStringArray(["--headless", "--editor"]), "headless", "true"),
-		"truthy GODOT_AI_ALLOW_HEADLESS values must preserve MCP startup"
+		RuntimeStudioPlugin._mcp_disabled_for_headless(PackedStringArray(["--headless", "--editor"]), "headless", "true"),
+		"truthy RUNTIME_STUDIO_ALLOW_HEADLESS values must preserve MCP startup"
 	)
 
 
 func test_display_driver_headless_args_disable_mcp() -> void:
 	assert_true(
-		GodotAiPlugin._mcp_disabled_for_headless(PackedStringArray(["--display-driver", "headless"]), "", ""),
+		RuntimeStudioPlugin._mcp_disabled_for_headless(PackedStringArray(["--display-driver", "headless"]), "", ""),
 		"--display-driver headless must disable MCP startup"
 	)
 	assert_true(
-		GodotAiPlugin._mcp_disabled_for_headless(PackedStringArray(["--display-driver=headless"]), "", ""),
+		RuntimeStudioPlugin._mcp_disabled_for_headless(PackedStringArray(["--display-driver=headless"]), "", ""),
 		"--display-driver=headless must disable MCP startup"
 	)
 
@@ -132,7 +132,7 @@ Start Port    End Port
     9591          9690
 """
 	assert_eq(
-		GodotAiPlugin._resolve_ws_port_from_output(9500, output),
+		RuntimeStudioPlugin._resolve_ws_port_from_output(9500, output),
 		9691,
 		"configured WS port inside adjacent excluded ranges should move to first clear port",
 	)
@@ -147,7 +147,7 @@ Start Port    End Port
     9491          9590
 """
 	assert_eq(
-		GodotAiPlugin._resolve_ws_port_from_output(10500, output),
+		RuntimeStudioPlugin._resolve_ws_port_from_output(10500, output),
 		10500,
 		"unreserved configured WS port should stay stable",
 	)
@@ -174,7 +174,7 @@ func test_pid_alive_rejects_zombie_children() -> void:
 	## that exits essentially instantly; under load 100ms can be flaky.
 	OS.delay_msec(300)
 	assert_false(
-		GodotAiPlugin._pid_alive(pid),
+		RuntimeStudioPlugin._pid_alive(pid),
 		"zombie (exited, unreaped) child must NOT be reported as alive",
 	)
 
@@ -186,7 +186,7 @@ func test_pid_alive_reports_running_process_as_alive() -> void:
 	var own_pid := OS.get_process_id()
 	assert_gt(own_pid, 0, "sanity: OS.get_process_id must return a positive pid")
 	assert_true(
-		GodotAiPlugin._pid_alive(own_pid),
+		RuntimeStudioPlugin._pid_alive(own_pid),
 		"the test runner's own process must be reported as alive",
 	)
 
@@ -196,8 +196,8 @@ func test_pid_alive_returns_false_for_nonexistent_pid() -> void:
 	## use a high PID that's essentially guaranteed free. `ps` exits non-zero
 	## when the PID doesn't exist, which must map to false, not true.
 	assert_false(
-		GodotAiPlugin._pid_alive(2147483646),
+		RuntimeStudioPlugin._pid_alive(2147483646),
 		"a non-existent PID must be reported as dead",
 	)
-	assert_false(GodotAiPlugin._pid_alive(0), "pid <= 0 is never alive")
-	assert_false(GodotAiPlugin._pid_alive(-1), "negative pid is never alive")
+	assert_false(RuntimeStudioPlugin._pid_alive(0), "pid <= 0 is never alive")
+	assert_false(RuntimeStudioPlugin._pid_alive(-1), "negative pid is never alive")

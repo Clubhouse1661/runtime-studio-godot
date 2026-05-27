@@ -11,7 +11,7 @@ extends McpTestSuite
 ## right `InstallStatus` so the caller knows whether the addons tree is safe
 ## to re-enable the plugin against.
 
-const UpdateReloadRunner := preload("res://addons/godot_ai/update_reload_runner.gd")
+const UpdateReloadRunner := preload("res://addons/runtime_studio/update_reload_runner.gd")
 const PROBE_PREFIX := "__update_runner_probe_"
 
 var _scratch_dir: String
@@ -79,7 +79,7 @@ func _new_runner():
 
 
 func _cleanup_probe_files() -> void:
-	var addon_dir := ProjectSettings.globalize_path("res://addons/godot_ai")
+	var addon_dir := ProjectSettings.globalize_path("res://addons/runtime_studio")
 	if not DirAccess.dir_exists_absolute(addon_dir):
 		return
 	for f in DirAccess.get_files_at(addon_dir):
@@ -95,7 +95,7 @@ func test_rollback_restores_originals_from_backup() -> void:
 	## by vN+1 mid-install must be restored from their `.update_backup`
 	## snapshots, with the snapshot deleted afterward.
 	var runner = _new_runner()
-	var target := _scratch_dir.path_join("addons/godot_ai/file_a.gd")
+	var target := _scratch_dir.path_join("addons/runtime_studio/file_a.gd")
 	_make_file(target, "vN_content")
 	var backup := target + UpdateReloadRunner.INSTALL_BACKUP_SUFFIX
 	# Snapshot the original (mimics _install_zip_file's COPY backup step).
@@ -131,7 +131,7 @@ func test_rollback_deletes_files_that_did_not_exist_before_update() -> void:
 	## exist in vN, then a later file failed to install. The orphan must
 	## be removed so the addons dir matches its vN state.
 	var runner = _new_runner()
-	var target := _scratch_dir.path_join("addons/godot_ai/brand_new.gd")
+	var target := _scratch_dir.path_join("addons/runtime_studio/brand_new.gd")
 	_make_file(target, "vN+1_only")
 	# `had_original = false` — vN didn't have this file. backup_path is
 	# computed by _install_zip_file but never populated when the original
@@ -162,7 +162,7 @@ func test_rollback_returns_failed_mixed_when_backup_is_missing() -> void:
 	## this state — it would load a half-vN+1 / half-vN tree. This is the
 	## load-bearing signal for issue #297 finding #9.
 	var runner = _new_runner()
-	var target := _scratch_dir.path_join("addons/godot_ai/no_backup.gd")
+	var target := _scratch_dir.path_join("addons/runtime_studio/no_backup.gd")
 	_make_file(target, "vN+1_clobbered_original")
 	# No backup file on disk — simulate a backup that vanished mid-install.
 	runner._paths_written.append({
@@ -192,7 +192,7 @@ func test_rollback_surfaces_failed_mixed_when_restore_failed_flag_is_set() -> vo
 	## every recorded entry rolls back successfully.
 	var runner = _new_runner()
 	# Pre-condition: a record that on its own would rollback cleanly.
-	var target := _scratch_dir.path_join("addons/godot_ai/clean_record.gd")
+	var target := _scratch_dir.path_join("addons/runtime_studio/clean_record.gd")
 	_make_file(target, "vN_clean_record")
 	var backup := target + UpdateReloadRunner.INSTALL_BACKUP_SUFFIX
 	assert_eq(DirAccess.copy_absolute(target, backup), OK)
@@ -224,7 +224,7 @@ func test_rollback_processes_records_in_reverse_order() -> void:
 	## order would let an earlier "restore" undo a later "restore." Walk
 	## newest-first so the on-disk content lands at the original vN state.
 	var runner = _new_runner()
-	var target := _scratch_dir.path_join("addons/godot_ai/twice_touched.gd")
+	var target := _scratch_dir.path_join("addons/runtime_studio/twice_touched.gd")
 	_make_file(target, "vN_original")
 	var backup := target + UpdateReloadRunner.INSTALL_BACKUP_SUFFIX
 	# First write captured the true original.
@@ -260,7 +260,7 @@ func test_finalize_install_success_clears_backups() -> void:
 	## After both batches succeed, `.update_backup` snapshots are cleaned
 	## up so the addons dir doesn't accumulate stale rollback artifacts.
 	var runner = _new_runner()
-	var target := _scratch_dir.path_join("addons/godot_ai/finalized.gd")
+	var target := _scratch_dir.path_join("addons/runtime_studio/finalized.gd")
 	_make_file(target, "vN+1_final")
 	var backup := target + UpdateReloadRunner.INSTALL_BACKUP_SUFFIX
 	_make_file(backup, "vN_original")
@@ -305,13 +305,13 @@ func test_manifest_accepts_release_zip_and_installs_new_files() -> void:
 	## zip is accepted, existing addon files are classified separately, and
 	## the first-stage new-file install writes the expected content.
 	var probe_name := "%s%d.txt" % [PROBE_PREFIX, Time.get_ticks_usec()]
-	var probe_entry := "addons/godot_ai/%s" % probe_name
+	var probe_entry := "addons/runtime_studio/%s" % probe_name
 	var zip_path := _scratch_dir.path_join("update_success.zip")
 	_stage_release_zip(
 		zip_path,
 		{
-			"addons/godot_ai/plugin.cfg": "[plugin]\nname=\"Godot AI\"\n",
-			"addons/godot_ai/plugin.gd": "extends EditorPlugin\n",
+			"addons/runtime_studio/plugin.cfg": "[plugin]\nname=\"Runtime Studio for Godot\"\n",
+			"addons/runtime_studio/plugin.gd": "extends EditorPlugin\n",
 			probe_entry: "probe content\n",
 		},
 	)
@@ -322,8 +322,8 @@ func test_manifest_accepts_release_zip_and_installs_new_files() -> void:
 		runner._read_update_manifest(),
 		"release zip with plugin.cfg and plugin.gd must be accepted",
 	)
-	assert_contains(runner._existing_file_paths, "addons/godot_ai/plugin.cfg")
-	assert_contains(runner._existing_file_paths, "addons/godot_ai/plugin.gd")
+	assert_contains(runner._existing_file_paths, "addons/runtime_studio/plugin.cfg")
+	assert_contains(runner._existing_file_paths, "addons/runtime_studio/plugin.gd")
 	assert_contains(runner._new_file_paths, probe_entry)
 
 	assert_eq(
@@ -331,7 +331,7 @@ func test_manifest_accepts_release_zip_and_installs_new_files() -> void:
 		UpdateReloadRunner.InstallStatus.OK,
 		"new files should install from zip",
 	)
-	var target_path := ProjectSettings.globalize_path("res://addons/godot_ai/%s" % probe_name)
+	var target_path := ProjectSettings.globalize_path("res://addons/runtime_studio/%s" % probe_name)
 	assert_eq(_read_file(target_path), "probe content\n")
 	runner.free()
 
@@ -342,7 +342,7 @@ func test_install_zip_file_creates_backup_for_existing_target() -> void:
 	## snapshot, the vN+1 content at the target, and the returned record
 	## must reflect `had_original=true`.
 	var install_base := _scratch_dir.path_join("install_existing")
-	var rel := "addons/godot_ai/file_x.gd"
+	var rel := "addons/runtime_studio/file_x.gd"
 	var target := install_base.path_join(rel)
 	_make_file(target, "vN_x")
 	var zip_path := _scratch_dir.path_join("update_existing.zip")
@@ -372,7 +372,7 @@ func test_install_zip_file_records_new_files_without_backup() -> void:
 	## A file that didn't exist in vN must be recorded as had_original=false
 	## so rollback knows to delete it (not look for a missing backup).
 	var install_base := _scratch_dir.path_join("install_new")
-	var rel := "addons/godot_ai/brand_new.gd"
+	var rel := "addons/runtime_studio/brand_new.gd"
 	var target := install_base.path_join(rel)
 	# No vN file at target.
 	var zip_path := _scratch_dir.path_join("update_new.zip")
@@ -404,9 +404,9 @@ func test_install_zip_paths_rolls_back_when_mid_loop_write_fails() -> void:
 	## it was a brand-new file) and report FAILED_CLEAN. The addons dir
 	## must NOT be left in a half-vN / half-vN+1 state.
 	var install_base := _scratch_dir.path_join("install_partial")
-	var rel_existing := "addons/godot_ai/will_revert.gd"
-	var rel_blocked := "addons/godot_ai/blocked"
-	var rel_unreached := "addons/godot_ai/unreached.gd"
+	var rel_existing := "addons/runtime_studio/will_revert.gd"
+	var rel_blocked := "addons/runtime_studio/blocked"
+	var rel_unreached := "addons/runtime_studio/unreached.gd"
 	var target_existing := install_base.path_join(rel_existing)
 	var target_blocked := install_base.path_join(rel_blocked)
 	var target_unreached := install_base.path_join(rel_unreached)

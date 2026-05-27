@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const UiHandler := preload("res://addons/godot_ai/handlers/ui_handler.gd")
+const UiHandler := preload("res://addons/runtime_studio/handlers/ui_handler.gd")
 
 ## Tests for UiHandler — Control layout helpers (anchor presets).
 

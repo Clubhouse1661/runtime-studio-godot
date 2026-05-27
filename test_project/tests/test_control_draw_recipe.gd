@@ -1,15 +1,15 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const ControlDrawRecipeHandler := preload("res://addons/godot_ai/handlers/control_draw_recipe_handler.gd")
+const ControlDrawRecipeHandler := preload("res://addons/runtime_studio/handlers/control_draw_recipe_handler.gd")
 
 ## Live-editor tests for ControlDrawRecipeHandler — control_draw_recipe command.
 ## Covers: op validation, value coercion (Color/Vector2/Rect2/PackedVector2Array),
 ## script attachment, meta persistence, undo/redo round-trips, error paths.
 
-const DRAW_RECIPE_SCRIPT := preload("res://addons/godot_ai/runtime/draw_recipe.gd")
+const DRAW_RECIPE_SCRIPT := preload("res://addons/runtime_studio/runtime/draw_recipe.gd")
 
 var _handler: ControlDrawRecipeHandler
 var _undo_redo: EditorUndoRedoManager

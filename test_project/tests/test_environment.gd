@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const EnvironmentHandler := preload("res://addons/godot_ai/handlers/environment_handler.gd")
+const EnvironmentHandler := preload("res://addons/runtime_studio/handlers/environment_handler.gd")
 
 ## Tests for EnvironmentHandler — create Environment + Sky + SkyMaterial.
 

@@ -1,10 +1,10 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const NodeHandler := preload("res://addons/godot_ai/handlers/node_handler.gd")
-const ScriptHandler := preload("res://addons/godot_ai/handlers/script_handler.gd")
+const NodeHandler := preload("res://addons/runtime_studio/handlers/node_handler.gd")
+const ScriptHandler := preload("res://addons/runtime_studio/handlers/script_handler.gd")
 
 ## Tests for ScriptHandler — script creation, reading, attach/detach, and symbol inspection.
 
@@ -93,7 +93,7 @@ func test_finish_create_script_deferred_is_static_and_handles_null_connection() 
 	##
 	## The Python source-pin in tests/unit/test_script_create_import_settle.py
 	## also asserts the `static func` declaration at the source-text level.
-	var ScriptHandlerScript := preload("res://addons/godot_ai/handlers/script_handler.gd")
+	var ScriptHandlerScript := preload("res://addons/runtime_studio/handlers/script_handler.gd")
 	ScriptHandlerScript._finish_create_script_deferred(null, "req-x", "res://nope.gd", {})
 	assert_true(true, "Static call with null connection must not raise")
 

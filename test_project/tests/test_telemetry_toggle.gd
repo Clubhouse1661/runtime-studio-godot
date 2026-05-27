@@ -11,7 +11,7 @@ func suite_name() -> String:
 	return "telemetry_toggle"
 
 
-const _ENV1 := "GODOT_AI_DISABLE_TELEMETRY"
+const _ENV1 := "RUNTIME_STUDIO_DISABLE_TELEMETRY"
 const _ENV2 := "DISABLE_TELEMETRY"
 
 var _saved_env1: Variant = null
@@ -54,7 +54,7 @@ func _make_dock_with_toggle() -> Array:
 	return [dock, toggle]
 
 
-func test_toggle_disabled_when_godot_ai_disable_telemetry_set() -> void:
+func test_toggle_disabled_when_runtime_studio_disable_telemetry_set() -> void:
 	_clear_env_vars()
 	OS.set_environment(_ENV1, "true")
 	var pair := _make_dock_with_toggle()
@@ -64,7 +64,7 @@ func test_toggle_disabled_when_godot_ai_disable_telemetry_set() -> void:
 	var disabled := toggle.disabled
 	toggle.free()
 	dock.free()
-	assert_true(disabled, "toggle must be disabled when GODOT_AI_DISABLE_TELEMETRY=true")
+	assert_true(disabled, "toggle must be disabled when RUNTIME_STUDIO_DISABLE_TELEMETRY=true")
 
 
 func test_toggle_disabled_when_disable_telemetry_set() -> void:

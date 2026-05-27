@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from godot_ai.godot_client.circuit_breaker import EditorBridgeCircuitBreaker
+from runtime_studio.godot_client.circuit_breaker import EditorBridgeCircuitBreaker
 
 
 class _FakeClock:

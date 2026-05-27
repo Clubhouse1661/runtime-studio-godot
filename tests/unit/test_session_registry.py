@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from godot_ai.sessions.registry import Session, SessionRegistry
+from runtime_studio.sessions.registry import Session, SessionRegistry
 
 
 def _make_session(session_id: str = "test-001", **overrides) -> Session:
@@ -50,7 +50,7 @@ class TestSessionRegistry:
         reg.register(_make_session("a"))
         reg.register(_make_session("b"))
         reg.register(_make_session("c"))
-        with caplog.at_level("INFO", logger="godot_ai.sessions.registry"):
+        with caplog.at_level("INFO", logger="runtime_studio.sessions.registry"):
             reg.unregister("a")
 
         assert reg.active_session_id is None
@@ -64,7 +64,7 @@ class TestSessionRegistry:
         reg = SessionRegistry()
         reg.register(_make_session("a"))
         reg.register(_make_session("b"))
-        with caplog.at_level("WARNING", logger="godot_ai.sessions.registry"):
+        with caplog.at_level("WARNING", logger="runtime_studio.sessions.registry"):
             reg.unregister("a")
 
         assert reg.active_session_id == "b"
@@ -123,7 +123,7 @@ class TestSessionRegistry:
         assert d["editor_pid"] == 0
 
     def test_to_dict_includes_server_version(self):
-        from godot_ai import __version__ as running_version
+        from runtime_studio import __version__ as running_version
 
         s = _make_session()
         d = s.to_dict()
@@ -151,7 +151,7 @@ class TestSessionRegistryNoThreadingLock:
         assert not hasattr(reg, "_lock")
 
     def test_registry_module_does_not_import_threading(self):
-        import godot_ai.sessions.registry as registry_module
+        import runtime_studio.sessions.registry as registry_module
 
         assert "threading" not in vars(registry_module)
         assert "RLock" not in vars(registry_module)

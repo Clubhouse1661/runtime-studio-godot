@@ -12,8 +12,8 @@ import asyncio
 
 import pytest
 
-from godot_ai import telemetry as tel
-from godot_ai.godot_client.client import GodotCommandError
+from runtime_studio import telemetry as tel
+from runtime_studio.godot_client.client import GodotCommandError
 
 
 @pytest.fixture
@@ -311,7 +311,7 @@ class TestInstallFastmcpWraps:
         """
         from fastmcp import FastMCP
 
-        from godot_ai.tools._meta_tool import register_manage_tool
+        from runtime_studio.tools._meta_tool import register_manage_tool
 
         mcp = FastMCP("test")
         tel.install_fastmcp_wraps(mcp)

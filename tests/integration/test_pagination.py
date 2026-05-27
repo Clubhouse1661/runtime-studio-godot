@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 
-from godot_ai.godot_client.client import GodotClient
+from runtime_studio.godot_client.client import GodotClient
 
 
 def _make_nodes(count: int) -> list[dict]:

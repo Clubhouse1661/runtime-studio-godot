@@ -9,7 +9,7 @@ extends McpTestSuite
 ## entrypoint just gates on `OS.get_name() == "Windows"` because the
 ## hard-link lock pattern this defends against is NTFS-specific.
 
-const Cleanup := preload("res://addons/godot_ai/utils/uv_cache_cleanup.gd")
+const Cleanup := preload("res://addons/runtime_studio/utils/uv_cache_cleanup.gd")
 
 var _scratch_root: String
 

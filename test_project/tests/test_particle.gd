@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const ParticleHandler := preload("res://addons/godot_ai/handlers/particle_handler.gd")
+const ParticleHandler := preload("res://addons/runtime_studio/handlers/particle_handler.gd")
 
 ## Tests for ParticleHandler — GPUParticles3D/2D, CPUParticles3D/2D,
 ## ParticleProcessMaterial authoring.

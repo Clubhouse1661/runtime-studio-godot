@@ -20,7 +20,7 @@ config/features=PackedStringArray("4.6")
 
 [autoload]
 
-_mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
+_mcp_game_helper="*res://addons/runtime_studio/runtime/game_helper.gd"
 
 [display]
 
@@ -34,4 +34,4 @@ project/assembly_name="MCP Test Project"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
+enabled=PackedStringArray("res://addons/runtime_studio/plugin.cfg")

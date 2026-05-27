@@ -6,4 +6,4 @@
 ## these scripts either. The collector treats this flag as a hard
 ## opt-out (no UUID generated, no worker thread, no _send). See
 ## docs/TELEMETRY.md.
-export GODOT_AI_DISABLE_TELEMETRY=true
+export RUNTIME_STUDIO_DISABLE_TELEMETRY=true

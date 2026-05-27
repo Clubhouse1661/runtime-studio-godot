@@ -17,7 +17,7 @@ from pathlib import Path
 
 import pytest
 
-from godot_ai import telemetry as tel
+from runtime_studio import telemetry as tel
 
 
 @pytest.fixture
@@ -29,11 +29,11 @@ def isolated_data_dir(monkeypatch, tmp_path: Path) -> Path:
     singleton before and after the test.
 
     Tests that assert endpoint resolution can still override or delete
-    ``GODOT_AI_TELEMETRY_ENDPOINT`` after this fixture is active.
+    ``RUNTIME_STUDIO_TELEMETRY_ENDPOINT`` after this fixture is active.
     """
-    monkeypatch.delenv("GODOT_AI_DISABLE_TELEMETRY", raising=False)
+    monkeypatch.delenv("RUNTIME_STUDIO_DISABLE_TELEMETRY", raising=False)
     monkeypatch.delenv("DISABLE_TELEMETRY", raising=False)
-    monkeypatch.setenv("GODOT_AI_TELEMETRY_ENDPOINT", "ftp://test-leak-guard.invalid/")
+    monkeypatch.setenv("RUNTIME_STUDIO_TELEMETRY_ENDPOINT", "ftp://test-leak-guard.invalid/")
     monkeypatch.setattr(tel.TelemetryConfig, "_get_data_directory", lambda self: tmp_path)
     monkeypatch.setattr(
         tel.TelemetryConfig,

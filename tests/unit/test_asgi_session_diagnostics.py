@@ -4,9 +4,9 @@ import json
 
 import pytest
 
-from godot_ai.asgi import STALE_MCP_SESSION_MESSAGE, StaleMcpSessionDiagnosticMiddleware
-from godot_ai.server import create_server
-from godot_ai.transport.origin_guard import LocalhostOnlyHTTPMiddleware
+from runtime_studio.asgi import STALE_MCP_SESSION_MESSAGE, StaleMcpSessionDiagnosticMiddleware
+from runtime_studio.server import create_server
+from runtime_studio.transport.origin_guard import LocalhostOnlyHTTPMiddleware
 
 
 async def _single_http_request(app, *, headers=None):

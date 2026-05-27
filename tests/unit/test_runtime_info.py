@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from godot_ai import runtime_info
-from godot_ai.runtime_info import install_pid_file, is_plugin_managed
+from runtime_studio import runtime_info
+from runtime_studio.runtime_info import install_pid_file, is_plugin_managed
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def _unregister_atexit(monkeypatch):
 
 
 def test_install_pid_file_writes_pid(tmp_path, _unregister_atexit):
-    pid_path = tmp_path / "godot_ai_server.pid"
+    pid_path = tmp_path / "runtime_studio_server.pid"
 
     result = install_pid_file(pid_path)
 
@@ -156,7 +156,7 @@ def test_main_plumbs_pid_file_into_runtime_info(monkeypatch, tmp_path):
         captured["path"] = path
         return Path(path) if path else None
 
-    monkeypatch.setattr("godot_ai.runtime_info.install_pid_file", fake_install)
+    monkeypatch.setattr("runtime_studio.runtime_info.install_pid_file", fake_install)
 
     ## Stub out the actual server run so the test doesn't bind a port.
     class StubServer:
@@ -164,13 +164,13 @@ def test_main_plumbs_pid_file_into_runtime_info(monkeypatch, tmp_path):
             captured["run_kwargs"] = kwargs
 
     monkeypatch.setattr(
-        "godot_ai.server.create_server",
+        "runtime_studio.server.create_server",
         lambda ws_port, *, exclude_domains=None: StubServer(),
     )
 
-    import godot_ai
+    import runtime_studio
 
-    godot_ai.main(
+    runtime_studio.main(
         [
             "--transport",
             "streamable-http",

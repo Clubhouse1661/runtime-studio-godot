@@ -1,7 +1,7 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
 ## Tests for McpConnection._make_session_id / _slugify — session ID format.
 

@@ -1,9 +1,9 @@
 @tool
 extends McpTestSuite
 
-const ErrorCodes := preload("res://addons/godot_ai/utils/error_codes.gd")
+const ErrorCodes := preload("res://addons/runtime_studio/utils/error_codes.gd")
 
-const ResourceHandler := preload("res://addons/godot_ai/handlers/resource_handler.gd")
+const ResourceHandler := preload("res://addons/runtime_studio/handlers/resource_handler.gd")
 
 ## Tests for ResourceHandler — resource search, load, and assign.
 

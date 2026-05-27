@@ -12,7 +12,7 @@ import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PLUGIN_ROOT = REPO_ROOT / "plugin" / "addons" / "godot_ai"
+PLUGIN_ROOT = REPO_ROOT / "plugin" / "addons" / "runtime_studio"
 PLUGIN_GD = PLUGIN_ROOT / "plugin.gd"
 
 

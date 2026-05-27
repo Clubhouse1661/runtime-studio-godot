@@ -1,0 +1,268 @@
+"""Session registry — tracks connected Godot editor instances."""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from functools import cached_property
+
+from runtime_studio import __version__ as _SERVER_VERSION
+from runtime_studio.telemetry import (
+    MilestoneType,
+    RecordType,
+    record_milestone,
+    record_telemetry,
+)
+
+logger = logging.getLogger(__name__)
+
+
+@dataclass
+class Session:
+    """A connected Godot editor session."""
+
+    session_id: str
+    godot_version: str
+    project_path: str
+    plugin_version: str
+    protocol_version: int = 1
+    current_scene: str = ""
+    play_state: str = "stopped"
+    readiness: str = "ready"
+    editor_pid: int = 0
+    ## Which launcher tier the plugin resolved the Python server from —
+    ## "dev_venv" | "uvx" | "system" | "unknown". Lets agents notice when a
+    ## plugin-level update left an older server running, or when a stray
+    ## dev `.venv` is silently overriding the published install. Older
+    ## plugins omit this in the handshake; default is "unknown".
+    server_launch_mode: str = "unknown"
+    connected_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_seen: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @cached_property
+    def name(self) -> str:
+        """Short human-readable name derived from project_path.
+
+        E.g. '/Users/x/Documents/runtime-studio-godot/test_project/' -> 'test_project'.
+        Falls back to the first 8 chars of session_id if the path is empty.
+        """
+        path = self.project_path.rstrip("/\\")
+        if not path:
+            return self.session_id[:8]
+        for sep in ("/", "\\"):
+            if sep in path:
+                return path.rsplit(sep, 1)[-1]
+        return path
+
+    def touch(self) -> None:
+        """Update last_seen to now. Called on every inbound message."""
+        self.last_seen = datetime.now(timezone.utc)
+
+    def to_dict(self) -> dict:
+        return {
+            "session_id": self.session_id,
+            "name": self.name,
+            "godot_version": self.godot_version,
+            "project_path": self.project_path,
+            "plugin_version": self.plugin_version,
+            "server_version": _SERVER_VERSION,
+            "protocol_version": self.protocol_version,
+            "current_scene": self.current_scene,
+            "play_state": self.play_state,
+            "readiness": self.readiness,
+            "editor_pid": self.editor_pid,
+            "server_launch_mode": self.server_launch_mode,
+            "connected_at": self.connected_at.isoformat(),
+            "last_seen": self.last_seen.isoformat(),
+        }
+
+
+class SessionRegistry:
+    """Tracks all connected Godot editor sessions.
+
+    Callers run on the single asyncio event loop driving the WS transport,
+    so state is mutated without locking.
+    """
+
+    def __init__(self):
+        self._sessions: dict[str, Session] = {}
+        self._active_session_id: str | None = None
+        self._session_waiters: list[
+            tuple[asyncio.Future[Session], str | None, frozenset[str], str | None]
+        ] = []
+
+    def register(self, session: Session) -> None:
+        to_notify: list[asyncio.Future[Session]] = []
+        self._sessions[session.session_id] = session
+        if self._active_session_id is None:
+            self._active_session_id = session.session_id
+        ## Session registration is on the editor's critical-path WebSocket
+        ## flow; a telemetry regression must not drop an editor session.
+        ## ``record_telemetry`` is contracted to be non-raising, but the
+        ## outer guard belts-and-suspenders the contract — locked in by
+        ## ``test_register_swallows_telemetry_exceptions``.
+        try:
+            record_telemetry(
+                RecordType.GODOT_CONNECTION,
+                {
+                    "event": "connected",
+                    "godot_version": session.godot_version,
+                    "plugin_version": session.plugin_version,
+                    "protocol_version": session.protocol_version,
+                    "server_launch_mode": session.server_launch_mode,
+                    "session_count": len(self._sessions),
+                },
+                session_id=session.session_id,
+            )
+            if len(self._sessions) >= 2:
+                record_milestone(MilestoneType.MULTIPLE_SESSIONS)
+        except Exception:  # noqa: BLE001
+            logger.debug("session connect telemetry failed", exc_info=True)
+        remaining = []
+        for future, exclude_id, known_ids, project_path in self._session_waiters:
+            if future.done():
+                continue
+            if not self._matches_wait_criteria(
+                session,
+                exclude_id=exclude_id,
+                known_ids=known_ids,
+                project_path=project_path,
+            ):
+                remaining.append((future, exclude_id, known_ids, project_path))
+                continue
+            to_notify.append(future)
+        self._session_waiters = remaining
+
+        for future in to_notify:
+            if not future.done():
+                future.set_result(session)
+
+    def unregister(self, session_id: str) -> None:
+        ## Active-session promotion policy on disconnect:
+        ## - n>=2 survivors: do NOT auto-promote — picking by insertion order
+        ##   would route the user's commands to whichever editor happened to
+        ##   connect first ("routing by registration order" bug). Caller must
+        ##   session_activate explicitly.
+        ## - n=1 survivor (audit-v2 #8): the only safe single-editor path —
+        ##   promote it with a warning so an agent on the solo-user setup
+        ##   doesn't see opaque "no active session" errors after an editor
+        ##   crash. Ambiguity-by-order can't apply with one survivor.
+        ## - n=0: keep cleared; nothing to promote.
+        self._sessions.pop(session_id, None)
+        try:
+            record_telemetry(
+                RecordType.GODOT_CONNECTION,
+                {"event": "disconnected", "session_count": len(self._sessions)},
+                session_id=session_id,
+            )
+        except Exception:  # noqa: BLE001
+            logger.debug("session disconnect telemetry failed", exc_info=True)
+        if self._active_session_id != session_id:
+            return
+        self._active_session_id = None
+        if len(self._sessions) == 1:
+            survivor_id = next(iter(self._sessions))
+            self._active_session_id = survivor_id
+            logger.warning(
+                "Active session %s disconnected; auto-promoting sole survivor %s",
+                session_id[:8],
+                survivor_id[:8],
+            )
+        else:
+            logger.info(
+                "Active session %s disconnected; no active session until next register/activate",
+                session_id[:8],
+            )
+
+    def get(self, session_id: str) -> Session | None:
+        return self._sessions.get(session_id)
+
+    def get_active(self) -> Session | None:
+        if self._active_session_id:
+            return self._sessions.get(self._active_session_id)
+        return None
+
+    def set_active(self, session_id: str) -> None:
+        if session_id not in self._sessions:
+            raise KeyError(f"Session {session_id} not found")
+        self._active_session_id = session_id
+
+    def list_all(self) -> list[Session]:
+        return list(self._sessions.values())
+
+    @property
+    def active_session_id(self) -> str | None:
+        return self._active_session_id
+
+    async def wait_for_session(
+        self,
+        exclude_id: str | None = None,
+        timeout: float = 15.0,
+        *,
+        known_ids: set[str] | frozenset[str] | None = None,
+        project_path: str | None = None,
+    ) -> Session:
+        """Block until a new session registers (optionally excluding one ID).
+
+        If ``known_ids`` is provided, sessions registered after that snapshot but
+        before this waiter is installed are returned synchronously without yielding.
+        Raises TimeoutError if no matching session appears within timeout.
+        """
+        loop = asyncio.get_running_loop()
+        known_ids_frozen = frozenset(self._sessions) if known_ids is None else frozenset(known_ids)
+        existing = self._find_matching_session(
+            exclude_id=exclude_id,
+            known_ids=known_ids_frozen,
+            project_path=project_path,
+        )
+        if existing is not None:
+            return existing
+        future: asyncio.Future[Session] = loop.create_future()
+        entry = (future, exclude_id, known_ids_frozen, project_path)
+        self._session_waiters.append(entry)
+        try:
+            return await asyncio.wait_for(future, timeout=timeout)
+        except asyncio.TimeoutError:
+            raise TimeoutError("Timed out waiting for new session") from None
+        finally:
+            self._session_waiters = [w for w in self._session_waiters if w is not entry]
+            if not future.done():
+                future.cancel()
+
+    def _find_matching_session(
+        self,
+        *,
+        exclude_id: str | None,
+        known_ids: frozenset[str],
+        project_path: str | None,
+    ) -> Session | None:
+        for session in self._sessions.values():
+            if self._matches_wait_criteria(
+                session,
+                exclude_id=exclude_id,
+                known_ids=known_ids,
+                project_path=project_path,
+            ):
+                return session
+        return None
+
+    @staticmethod
+    def _matches_wait_criteria(
+        session: Session,
+        *,
+        exclude_id: str | None,
+        known_ids: frozenset[str],
+        project_path: str | None,
+    ) -> bool:
+        if exclude_id is not None and session.session_id == exclude_id:
+            return False
+        if session.session_id in known_ids:
+            return False
+        if project_path is not None and session.project_path != project_path:
+            return False
+        return True
+
+    def __len__(self) -> int:
+        return len(self._sessions)
