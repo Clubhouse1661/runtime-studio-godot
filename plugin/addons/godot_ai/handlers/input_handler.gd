@@ -194,8 +194,16 @@ func _create_event(event_type: String, params: Dictionary):
 			var ev := InputEventJoypadButton.new()
 			ev.button_index = int(params.get("button", 0))
 			return ev
+		"joy_axis":
+			if not params.has("axis"):
+				return ErrorCodes.make(ErrorCodes.MISSING_REQUIRED_PARAM,
+					"event_type='joy_axis' requires axis (JoyAxis index, e.g. 0=left stick X, 1=left stick Y).")
+			var ev := InputEventJoypadMotion.new()
+			ev.axis = int(params.get("axis", 0))
+			ev.axis_value = float(params.get("axis_value", 1.0))
+			return ev
 	return ErrorCodes.make(ErrorCodes.VALUE_OUT_OF_RANGE,
-		"Unsupported event_type: '%s'. Use 'key', 'mouse_button', or 'joy_button'." % event_type)
+		"Unsupported event_type: '%s'. Use 'key', 'mouse_button', 'joy_button', or 'joy_axis'." % event_type)
 
 
 func _serialize_event(event: InputEvent) -> Dictionary:
